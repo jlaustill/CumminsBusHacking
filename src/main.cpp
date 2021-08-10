@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include "./QueueList.h"
 //can you do the CANCAN!
 /*
 CUMMINS/BOSCH CAN bus diagnostic tool with mcp2515 CAN module
@@ -39,6 +40,26 @@ it is started when cold then comes down after a long warm up to about 15*. That 
 // 24 Valve Cummins CAN bus messages. How to decode them ?
 // Arduino Uno and MCP2515 CAN module (no name) from Asia.
 
+Message format
+byte 0  1  4 5 6  7  8  9  10 11 12
+     22 40 8 4 30 98 23 96 6  11 13
+
+byte 0 PID maybe?
+ * ends in 2 when messages come from the VP44
+ * ends in 0 when messages come from the ECU
+ * ends in 7 when messages come from the Quadzilla ??
+
+byte 1
+ * 0x40 for messages from the VP44
+ * 0x00 for messages from the ECU
+ * 98 and 5A appear for PID 67
+ * FA and 5A appear for PID C7
+
+byte 4
+ * data length
+
+bytes 5-12
+ * data
 
 
 22 40 8 4 30 98 23 96 6 11 13       P >> E 74158432 diff 25256 idle val sw acc pedal up   timing error  counter 2 RPM range 3 Fuel temp F 46
@@ -110,6 +131,16 @@ LiquidCrystal_I2C lcd(0x27,20,4);  // set the LCD address to 0x3F for a 16 chars
 // using non volatile memory too
 #include <EEPROM.h>
 
+struct CanMessage {
+    byte id;
+    byte unknown;
+    byte length;
+    byte data[8];
+};
+
+volatile QueueList<CanMessage> canMessages;
+CanMessage newMessage{};
+
 const int CANint1 = 2;  //CAN1 INT pin to Arduino pin 2
 const int ss = 53;        //pin 10 for UNO or pin 53 for mega
 
@@ -128,8 +159,8 @@ volatile unsigned long timeStamp, timeStampM[8];
 unsigned long ID, diffT;
 unsigned long lastSample, lastPrint, PRINTinterval = 200;
 unsigned long RPM, FuelLongM, FuelLongR, TimingLongM, TimingLongR;
-unsigned long fuelTemp;
-int oilPressure = 0;
+double fuelTemp;
+double oilPressure = 0;
 int waterTemp = 0;
 unsigned long throttlePercentage = 0;
 float ait;
@@ -244,7 +275,31 @@ void ISR_trig0(){
     for(int i = 0; i < 13; i++){
         data[m1][i] = SPI.transfer(0x00);
         if(!saved){dataBuff[m1][i] = data[m1][i];}
+        switch (i) {
+            case 0:
+                newMessage.id = data[m1][i];
+                break;
+            case 1:
+                newMessage.unknown = data[m1][i];
+                break;
+            case 4:
+                newMessage.length = data[m1][i];
+                break;
+            case 5:
+            case 6:
+            case 7:
+            case 8:
+            case 9:
+            case 10:
+            case 11:
+            case 12:
+                newMessage.data[i - 5] = data[m1][i];
+                break;
+            default:
+                break;
+        }
     }
+//    canMessages.push(newMessage);
     digitalWrite(6, HIGH);
 
     //modify fuel bytes if CAN message has ID of 0x20
@@ -323,7 +378,7 @@ void printDTC()
     }
     Serial.println();
 }
-
+int onlyPrint16 = 0;
 void printout(){
     int offSet;
     byte counter;
@@ -331,16 +386,34 @@ void printout(){
     float FuelPCT;
     float volts;
 
+    while (!canMessages.isEmpty() && onlyPrint16++ < 16) {
+        CanMessage currentMessage = canMessages.pop();
+        Serial.print("New message: ");
+        Serial.print(currentMessage.id, HEX);
+        Serial.print(" ");
+        Serial.print(currentMessage.unknown, HEX);
+        Serial.print(" ");
+        Serial.print(currentMessage.length, HEX);
+
+        for (unsigned char i : currentMessage.data) {
+            Serial.print(" ");
+            Serial.print(i, HEX);
+        }
+        Serial.println();
+    }
+    Serial.println();
+    onlyPrint16 = 0;
+
     for(y = 0; y < 8; y++){
         for(int i = 0; i < (dataBuff[y][4]&0x0F)+5; i++){ //data[y][4] lower nibble is the DLC (data length)
             //do not print bytes 2 and 3 if STID frame
-            if(i > 3 || i < 2){
+//            if(i > 3 || i < 2){
                 if((dataBuff[y][0] == printID) || (all == 1))
                 {
                     Serial.print(dataBuff[y][i], HEX);
                     Serial.print(" ");
                 }
-            }
+//            }
         }
         Serial.print(" ");
         Serial.print("\t");
@@ -373,7 +446,7 @@ void printout(){
 
             //cylinder counter is high nibble of byte 8. Lower nibble changes from 0 to 3 when running
             counter = ((dataBuff[y][8] >> 4) / 2) + 1; //decode; counts by even numbers
-            if(!dataBuff[y][8] & 0x03)
+            if(!(dataBuff[y][8] & 0x03))
             {
                 counter = 0;    //not running
             }
@@ -476,8 +549,11 @@ void printout(){
             Serial.print(" Volts ");
             Serial.print(volts,1);
 
-            // 11 and 12 seem to be AIT
+            // 11 and 12 seem to be AIT?
             offSet = (dataBuff[y][12] << 8) | dataBuff[y][11];
+            offSet = offSet / 16;
+            offSet = offSet - 273.15;
+            offSet = ((offSet * 9) / 5) + 32;
 //            offSet = offSet / 100;
 //            offSet = ((offSet * 9) / 5) + 32;
             Serial.print(" AIT? ");
@@ -494,11 +570,18 @@ void printout(){
 //            oilPressure = dataBuff[y][3];
 //        }
 
+        // Confidence in PID, 99%
+        // Confidence in Math, 20%
+        if(dataBuff[y][0] == 0xC7 && dataBuff[y][1] == 0xFB) {
+            oilPressure = (dataBuff[y][6] * 256) + dataBuff[y][5];
+            oilPressure /= 256;
+        }
+
         if(dataBuff[y][0] == 0x67 && dataBuff[y][1] == 0x98 && dataBuff[y][4] == 0x8 && dataBuff[y][5] == 0xF0 && dataBuff[y][9] != 0xFF) {
             // 6 and 7 always seem to be the same bit, maybe this has meaning?
             // didn't show up on startup until I pressed the throttle :thinking:
             // also seems to stop when the throttle is pressed and show back up when you take your foot off
-            waterTemp = (dataBuff[y][9] << 4) | (dataBuff[y][8]);
+//            waterTemp = (dataBuff[y][9] << 4) | (dataBuff[y][8]);
 //            waterTemp = waterTemp / 1000;
 //            waterTemp = ((waterTemp * 9) / 5) + 32;
         }
@@ -755,19 +838,25 @@ void ISR_trig1()
 void updateLcd() {
     char buffer [21];
     lcd.setCursor(0,0);
-    lcd.print("Water Temp AIT F");
+    lcd.print("Oil Press AIT F");
     lcd.setCursor(0,1);
-    snprintf(buffer, sizeof(buffer), "%4d      ", waterTemp);
-    lcd.print(buffer);
-    snprintf(buffer, sizeof(buffer), "%.1f", 27.777);
-    lcd.print(ait);
+    lcd.print("                    ");
+    lcd.setCursor(0,1);
+//    snprintf(buffer, sizeof(buffer), "%4d      ", oilPressure);
+    lcd.print(oilPressure);
+    lcd.setCursor(11,1);
+//    snprintf(buffer, sizeof(buffer), "%.1f", 27.777);
+//    lcd.print(ait);
     lcd.setCursor(0,2);
     lcd.print("RPM:      Fuel Temp ");
     lcd.setCursor(0,3);
-    snprintf(buffer, sizeof(buffer), "%4d      ", RPM);
-    lcd.print(buffer);
-    snprintf(buffer, sizeof(buffer), "%4d", fuelTemp);
-    lcd.print(buffer);
+    lcd.print("                    ");
+    lcd.setCursor(0,3);
+//    snprintf(buffer, sizeof(buffer), "%4d      ", RPM);
+    lcd.print(RPM);
+    lcd.setCursor(11,3);
+//    snprintf(buffer, sizeof(buffer), "%4d", fuelTemp);
+    lcd.print(fuelTemp);
 
 }
 
