@@ -187,7 +187,7 @@ unsigned long lastSample, lastPrint, PRINTinterval = 1000;
 unsigned long RPM, FuelLongM, FuelLongR, TimingLongM, TimingLongR;
 double fuelTemp;
 double oilPressure = 0;
-int waterTemp = 0;
+double waterTemp = 0;
 unsigned long throttlePercentage = 0;
 float ait;
 
@@ -909,8 +909,12 @@ void printout(){
     Serial.print(C7FAEEMessage.data[6]); // always 255
     Serial.print(" ");
     Serial.print(C7FAEEMessage.data[7]); // always 255
-    Serial.print(" ");
+    Serial.print(" Count: ");
     Serial.print(C7FAEEMessage.count);
+    Serial.print(" Water Temp: ");
+    waterTemp = (C7FAEEMessage.data[1] >> 8) | C7FAEEMessage.data[0] - 40; // celcius water temp!!!
+    waterTemp = waterTemp * 9 / 5 + 32; // F
+    Serial.print(waterTemp);
     Serial.println();
     // done C7FAEEMessage
 
@@ -941,7 +945,7 @@ void printout(){
     Serial.print(C7FAEFMessage.data[7]); // always 255
     Serial.print(" Count: ");
     Serial.print(C7FAEFMessage.count);
-    Serial.print(" Guess? ");
+    Serial.print(" Oil Pressure? ");
     Serial.print(C7FAEFMessage.data[3] * 4 / 6.895); // OIL PRESSURE!!!
     oilPressure = C7FAEFMessage.data[3] * 4 / 6.895;
     Serial.println();
@@ -1722,45 +1726,25 @@ void updateLcd() {
     char buffer [21];
     // row 1
     lcd.setCursor(0,0);
-    dtostrf(throttlePercentage, 5, 0, buffer);
-    lcd.print(buffer);
-    dtostrf(oilPressure, 5, 0, buffer);
-    lcd.print(buffer);
-//    dtostrf((C7FAF6Message.data[2] << 8) | C7FAF6Message.data[1], 5, 0, buffer);
-    lcd.print(buffer);
+    lcd.print(" Oil Pres.  H2O Temp");
 
     // row 2
     lcd.setCursor(0,1);
-    dtostrf(C7FAF7Message.data[6], 5, 0, buffer);
+    dtostrf(oilPressure, 10, 2, buffer);
     lcd.print(buffer);
-    dtostrf(C7FAF7Message.data[7], 5, 0, buffer);
-    lcd.print(buffer);
-    float testytest = (C7FBE0Message.data[3] << 8) | C7FBE0Message.data[2];
-    testytest /= 16;
-    dtostrf(testytest, 5, 0, buffer);
+    dtostrf(waterTemp,10, 2, buffer);
     lcd.print(buffer);
 
     // row 3
     lcd.setCursor(0,2);
-    dtostrf(C7FBE0Message.data[0], 5, 0, buffer);
-    lcd.print(buffer);
-    dtostrf((C7FBE0Message.data[1] - 24) * 100 / 256, 5, 0, buffer);
-    lcd.print(buffer);
-    dtostrf(C7FBE0Message.data[2], 5, 0, buffer);
-    lcd.print(buffer);
-    dtostrf(C7FBE0Message.data[3], 5, 0, buffer);
-    lcd.print(buffer);
+    lcd.print("  RPM      Fuel Temp");
 
 
     // row 4
     lcd.setCursor(0,3);
-    dtostrf(C7FBE0Message.data[4], 5, 0, buffer);
+    dtostrf(RPM, 5, 0, buffer);
     lcd.print(buffer);
-    dtostrf(C7FBE0Message.data[5], 5, 0, buffer);
-    lcd.print(buffer);
-    dtostrf(C7FBE0Message.data[6], 5, 0, buffer);
-    lcd.print(buffer);
-    dtostrf(C7FBE0Message.data[7], 5, 0, buffer);
+    dtostrf(fuelTemp, 15, 2, buffer);
     lcd.print(buffer);
 }
 
