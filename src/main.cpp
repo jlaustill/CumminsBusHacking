@@ -134,12 +134,38 @@ LiquidCrystal_I2C lcd(0x27,20,4);  // set the LCD address to 0x3F for a 16 chars
 struct CanMessage {
     byte id;
     byte unknown;
+    byte unknown2;
     byte length;
     byte data[8];
+    unsigned count;
 };
 
+// unknown pids, but fills up the memory and FAST...
 volatile QueueList<CanMessage> canMessages;
 CanMessage newMessage{};
+
+// Known PID's
+volatile CanMessage C75BFFMessage{};
+volatile CanMessage C778FFMessage{};
+volatile CanMessage C7980Message{};
+volatile CanMessage C7FADFMessage{};
+volatile CanMessage C7FAE4Message{};
+volatile CanMessage C7FAEEMessage{};
+volatile CanMessage C7FAEFMessage{};
+volatile CanMessage C7FAF0Message{};
+volatile CanMessage C7FAF1Message{};
+volatile CanMessage C7FAF2Message{};
+volatile CanMessage C7FAF5Message{};
+volatile CanMessage C7FAF6Message{};
+volatile CanMessage C7FAF7Message{};
+volatile CanMessage C7FBE0Message{};
+volatile CanMessage x20Message{};
+volatile CanMessage x22Message{};
+volatile CanMessage xA0Message{};
+volatile CanMessage xA2Message{};
+volatile CanMessage x675A0Message{0x67, 0x5A, 0x0, 0xF8, {0x3, 0xF7, 0xFE, 0x0, 0x0, 0x0, 0x0, 0x0}, 0};
+volatile CanMessage x67984Message{0x67, 0x98, 0x4, 0x8, {0xFE, 0x7D, 0x7D, 0xC0, 0x1, 0xFF, 0xFF, 0xFF}, 0};
+volatile CanMessage x67983Message{0x67, 0x98, 0x3, 0x8, {0xF1, 0x0, 0x0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}, 0};
 
 const int CANint1 = 2;  //CAN1 INT pin to Arduino pin 2
 const int ss = 53;        //pin 10 for UNO or pin 53 for mega
@@ -157,7 +183,7 @@ int CMP = 3;  //cam pos sensor
 int EEwrite, APPS, APPSi;
 volatile unsigned long timeStamp, timeStampM[8];
 unsigned long ID, diffT;
-unsigned long lastSample, lastPrint, PRINTinterval = 200;
+unsigned long lastSample, lastPrint, PRINTinterval = 1000;
 unsigned long RPM, FuelLongM, FuelLongR, TimingLongM, TimingLongR;
 double fuelTemp;
 double oilPressure = 0;
@@ -274,30 +300,302 @@ void ISR_trig0(){
     SPI.transfer(0x90);   //read buffer 0 Command. also clears the CAN module interrupt flag
     for(int i = 0; i < 13; i++){
         data[m1][i] = SPI.transfer(0x00);
-        if(!saved){dataBuff[m1][i] = data[m1][i];}
-        switch (i) {
-            case 0:
-                newMessage.id = data[m1][i];
-                break;
-            case 1:
-                newMessage.unknown = data[m1][i];
-                break;
-            case 4:
-                newMessage.length = data[m1][i];
-                break;
-            case 5:
-            case 6:
-            case 7:
-            case 8:
-            case 9:
-            case 10:
-            case 11:
-            case 12:
-                newMessage.data[i - 5] = data[m1][i];
-                break;
-            default:
-                break;
+    }
+
+    if (data[m1][0] == 0xC7 && data[m1][1] == 0x78 && data[m1][2] == 0xFF) {
+        C778FFMessage.id = data[m1][0];
+        C778FFMessage.unknown = data[m1][1];
+        C778FFMessage.length = data[m1][4];
+        C778FFMessage.data[0] = data[m1][5];
+        C778FFMessage.data[1] = data[m1][6];
+        C778FFMessage.data[2] = data[m1][7];
+        C778FFMessage.data[3] = data[m1][8];
+        C778FFMessage.data[4] = data[m1][9];
+        C778FFMessage.data[5] = data[m1][10];
+        C778FFMessage.data[6] = data[m1][11];
+        C778FFMessage.data[7] = data[m1][12];
+        C778FFMessage.count++;
+    } else if (data[m1][0] == 0xC7 && data[m1][1] == 0x5B && data[m1][2] == 0xFF) {
+        C75BFFMessage.id = data[m1][0];
+        C75BFFMessage.unknown = data[m1][1];
+        C75BFFMessage.length = data[m1][4];
+        C75BFFMessage.data[0] = data[m1][5];
+        C75BFFMessage.data[1] = data[m1][6];
+        C75BFFMessage.data[2] = data[m1][7];
+        C75BFFMessage.data[3] = data[m1][8];
+        C75BFFMessage.data[4] = data[m1][9];
+        C75BFFMessage.data[5] = data[m1][10];
+        C75BFFMessage.data[6] = data[m1][11];
+        C75BFFMessage.data[7] = data[m1][12];
+        C75BFFMessage.count++;
+    } else if (data[m1][0] == 0xC7 && data[m1][1] == 0xFA && data[m1][2] == 0xDF) {
+        C7FADFMessage.id = data[m1][0];
+        C7FADFMessage.unknown = data[m1][1];
+        C7FADFMessage.length = data[m1][4];
+        C7FADFMessage.data[0] = data[m1][5];
+        C7FADFMessage.data[1] = data[m1][6];
+        C7FADFMessage.data[2] = data[m1][7];
+        C7FADFMessage.data[3] = data[m1][8];
+        C7FADFMessage.data[4] = data[m1][9];
+        C7FADFMessage.data[5] = data[m1][10];
+        C7FADFMessage.data[6] = data[m1][11];
+        C7FADFMessage.data[7] = data[m1][12];
+        C7FADFMessage.count++;
+    } else if (data[m1][0] == 0xC7 && data[m1][1] == 0xFA && data[m1][2] == 0xF5) {
+        C7FAF5Message.id = data[m1][0];
+        C7FAF5Message.unknown = data[m1][1];
+        C7FAF5Message.length = data[m1][4];
+        C7FAF5Message.data[0] = data[m1][5];
+        C7FAF5Message.data[1] = data[m1][6];
+        C7FAF5Message.data[2] = data[m1][7];
+        C7FAF5Message.data[3] = data[m1][8];
+        C7FAF5Message.data[4] = data[m1][9];
+        C7FAF5Message.data[5] = data[m1][10];
+        C7FAF5Message.data[6] = data[m1][11];
+        C7FAF5Message.data[7] = data[m1][12];
+        C7FAF5Message.count++;
+    } else if (data[m1][0] == 0xC7 && data[m1][1] == 0xFA && data[m1][2] == 0xF2) {
+        C7FAF2Message.id = data[m1][0];
+        C7FAF2Message.unknown = data[m1][1];
+        C7FAF2Message.length = data[m1][4];
+        C7FAF2Message.data[0] = data[m1][5];
+        C7FAF2Message.data[1] = data[m1][6];
+        C7FAF2Message.data[2] = data[m1][7];
+        C7FAF2Message.data[3] = data[m1][8];
+        C7FAF2Message.data[4] = data[m1][9];
+        C7FAF2Message.data[5] = data[m1][10];
+        C7FAF2Message.data[6] = data[m1][11];
+        C7FAF2Message.data[7] = data[m1][12];
+        C7FAF2Message.count++;
+    } else if (data[m1][0] == 0xC7 && data[m1][1] == 0xFA && data[m1][2] == 0xF1) {
+        C7FAF1Message.id = data[m1][0];
+        C7FAF1Message.unknown = data[m1][1];
+        C7FAF1Message.length = data[m1][4];
+        C7FAF1Message.data[0] = data[m1][5];
+        C7FAF1Message.data[1] = data[m1][6];
+        C7FAF1Message.data[2] = data[m1][7];
+        C7FAF1Message.data[3] = data[m1][8];
+        C7FAF1Message.data[4] = data[m1][9];
+        C7FAF1Message.data[5] = data[m1][10];
+        C7FAF1Message.data[6] = data[m1][11];
+        C7FAF1Message.data[7] = data[m1][12];
+        C7FAF1Message.count++;
+    } else if (data[m1][0] == 0xC7 && data[m1][1] == 0xFA && data[m1][2] == 0xEE) {
+        C7FAEEMessage.id = data[m1][0];
+        C7FAEEMessage.unknown = data[m1][1];
+        C7FAEEMessage.length = data[m1][4];
+        C7FAEEMessage.data[0] = data[m1][5];
+        C7FAEEMessage.data[1] = data[m1][6];
+        C7FAEEMessage.data[2] = data[m1][7];
+        C7FAEEMessage.data[3] = data[m1][8];
+        C7FAEEMessage.data[4] = data[m1][9];
+        C7FAEEMessage.data[5] = data[m1][10];
+        C7FAEEMessage.data[6] = data[m1][11];
+        C7FAEEMessage.data[7] = data[m1][12];
+        C7FAEEMessage.count++;
+    } else if (data[m1][0] == 0xC7 && data[m1][1] == 0xFA && data[m1][2] == 0xEF) {
+        C7FAEFMessage.id = data[m1][0];
+        C7FAEFMessage.unknown = data[m1][1];
+        C7FAEFMessage.length = data[m1][4];
+        C7FAEFMessage.data[0] = data[m1][5];
+        C7FAEFMessage.data[1] = data[m1][6];
+        C7FAEFMessage.data[2] = data[m1][7];
+        C7FAEFMessage.data[3] = data[m1][8];
+        C7FAEFMessage.data[4] = data[m1][9];
+        C7FAEFMessage.data[5] = data[m1][10];
+        C7FAEFMessage.data[6] = data[m1][11];
+        C7FAEFMessage.data[7] = data[m1][12];
+        C7FAEFMessage.count++;
+    } else if (data[m1][0] == 0xC7 && data[m1][1] == 0xFA && data[m1][2] == 0xE4) {
+        C7FAE4Message.id = data[m1][0];
+        C7FAE4Message.unknown = data[m1][1];
+        C7FAE4Message.length = data[m1][4];
+        C7FAE4Message.data[0] = data[m1][5];
+        C7FAE4Message.data[1] = data[m1][6];
+        C7FAE4Message.data[2] = data[m1][7];
+        C7FAE4Message.data[3] = data[m1][8];
+        C7FAE4Message.data[4] = data[m1][9];
+        C7FAE4Message.data[5] = data[m1][10];
+        C7FAE4Message.data[6] = data[m1][11];
+        C7FAE4Message.data[7] = data[m1][12];
+        C7FAE4Message.count++;
+    } else if (data[m1][0] == 0xC7 && data[m1][1] == 0x98 && data[m1][2] == 0x0) {
+        C7980Message.id = data[m1][0];
+        C7980Message.unknown = data[m1][1];
+        C7980Message.length = data[m1][4];
+        C7980Message.data[0] = data[m1][5];
+        C7980Message.data[1] = data[m1][6];
+        C7980Message.data[2] = data[m1][7];
+        C7980Message.data[3] = data[m1][8];
+        C7980Message.data[4] = data[m1][9];
+        C7980Message.data[5] = data[m1][10];
+        C7980Message.data[6] = data[m1][11];
+        C7980Message.data[7] = data[m1][12];
+        C7980Message.count++;
+    } else if (data[m1][0] == 0xC7 && data[m1][1] == 0xFA && data[m1][2] == 0xF0) {
+        C7FAF0Message.id = data[m1][0];
+        C7FAF0Message.unknown = data[m1][1];
+        C7FAF0Message.length = data[m1][4];
+        C7FAF0Message.data[0] = data[m1][5];
+        C7FAF0Message.data[1] = data[m1][6];
+        C7FAF0Message.data[2] = data[m1][7];
+        C7FAF0Message.data[3] = data[m1][8];
+        C7FAF0Message.data[4] = data[m1][9];
+        C7FAF0Message.data[5] = data[m1][10];
+        C7FAF0Message.data[6] = data[m1][11];
+        C7FAF0Message.data[7] = data[m1][12];
+        C7FAF0Message.count++;
+    } else if (data[m1][0] == 0xC7 && data[m1][1] == 0xFA && data[m1][2] == 0xF6) {
+        C7FAF6Message.id = data[m1][0];
+        C7FAF6Message.unknown = data[m1][1];
+        C7FAF6Message.length = data[m1][4];
+        C7FAF6Message.data[0] = data[m1][5];
+        C7FAF6Message.data[1] = data[m1][6];
+        C7FAF6Message.data[2] = data[m1][7];
+        C7FAF6Message.data[3] = data[m1][8];
+        C7FAF6Message.data[4] = data[m1][9];
+        C7FAF6Message.data[5] = data[m1][10];
+        C7FAF6Message.data[6] = data[m1][11];
+        C7FAF6Message.data[7] = data[m1][12];
+        C7FAF6Message.count++;
+    } else if (data[m1][0] == 0xC7 && data[m1][1] == 0xFA && data[m1][2] == 0xF7) {
+        C7FAF7Message.id = data[m1][0];
+        C7FAF7Message.unknown = data[m1][1];
+        C7FAF7Message.length = data[m1][4];
+        C7FAF7Message.data[0] = data[m1][5];
+        C7FAF7Message.data[1] = data[m1][6];
+        C7FAF7Message.data[2] = data[m1][7];
+        C7FAF7Message.data[3] = data[m1][8];
+        C7FAF7Message.data[4] = data[m1][9];
+        C7FAF7Message.data[5] = data[m1][10];
+        C7FAF7Message.data[6] = data[m1][11];
+        C7FAF7Message.data[7] = data[m1][12];
+        C7FAF7Message.count++;
+    } else if (data[m1][0] == 0xC7 && data[m1][1] == 0xFB && data[m1][2] == 0xE0) {
+        C7FBE0Message.id = data[m1][0];
+        C7FBE0Message.unknown = data[m1][1];
+        C7FBE0Message.length = data[m1][4];
+        C7FBE0Message.data[0] = data[m1][5];
+        C7FBE0Message.data[1] = data[m1][6];
+        C7FBE0Message.data[2] = data[m1][7];
+        C7FBE0Message.data[3] = data[m1][8];
+        C7FBE0Message.data[4] = data[m1][9];
+        C7FBE0Message.data[5] = data[m1][10];
+        C7FBE0Message.data[6] = data[m1][11];
+        C7FBE0Message.data[7] = data[m1][12];
+        C7FBE0Message.count++;
+    } else if (data[m1][0] == 0x67 && data[m1][1] == 0x5A && data[m1][2] == 0x0) {
+        x675A0Message.data[0] = data[m1][5];
+        x675A0Message.data[1] = data[m1][6];
+        x675A0Message.data[2] = data[m1][7];
+        x675A0Message.data[3] = data[m1][8];
+        x675A0Message.data[4] = data[m1][9];
+        x675A0Message.data[5] = data[m1][10];
+        x675A0Message.data[6] = data[m1][11];
+        x675A0Message.data[7] = data[m1][12];
+        x675A0Message.count++;
+    }  else if (data[m1][0] == 0x67 && data[m1][1] == 0x98 && data[m1][2] == 0x3) {
+        x67983Message.data[0] = data[m1][5];
+        x67983Message.data[1] = data[m1][6];
+        x67983Message.data[2] = data[m1][7];
+        x67983Message.data[3] = data[m1][8];
+        x67983Message.data[4] = data[m1][9];
+        x67983Message.data[5] = data[m1][10];
+        x67983Message.data[6] = data[m1][11];
+        x67983Message.data[7] = data[m1][12];
+        x67983Message.count++;
+    }  else if (data[m1][0] == 0x67 && data[m1][1] == 0x98 && data[m1][2] == 0x4) {
+        x67984Message.data[0] = data[m1][5];
+        x67984Message.data[1] = data[m1][6];
+        x67984Message.data[2] = data[m1][7];
+        x67984Message.data[3] = data[m1][8];
+        x67984Message.data[4] = data[m1][9];
+        x67984Message.data[5] = data[m1][10];
+        x67984Message.data[6] = data[m1][11];
+        x67984Message.data[7] = data[m1][12];
+        x67984Message.count++;
+    } else if (data[m1][0] == 0xA0) {
+        xA0Message.id = data[m1][0];
+        xA0Message.unknown = data[m1][1];
+        xA0Message.length = data[m1][4];
+        xA0Message.data[0] = data[m1][5];
+        xA0Message.data[1] = data[m1][6];
+        xA0Message.data[2] = data[m1][7];
+        xA0Message.data[3] = data[m1][8];
+        xA0Message.data[4] = data[m1][9];
+        xA0Message.data[5] = data[m1][10];
+        xA0Message.data[6] = data[m1][11];
+        xA0Message.data[7] = data[m1][12];
+        xA0Message.count++;
+    } else if (data[m1][0] == 0xA2) {
+        xA2Message.id = data[m1][0];
+        xA2Message.unknown = data[m1][1];
+        xA2Message.length = data[m1][4];
+        xA2Message.data[0] = data[m1][5];
+        xA2Message.data[1] = data[m1][6];
+        xA2Message.data[2] = data[m1][7];
+        xA2Message.data[3] = data[m1][8];
+        xA2Message.data[4] = data[m1][9];
+        xA2Message.data[5] = data[m1][10];
+        xA2Message.data[6] = data[m1][11];
+        xA2Message.data[7] = data[m1][12];
+        xA2Message.count++;
+    } else if (data[m1][0] == 0x22) {
+        x22Message.id = data[m1][0];
+        x22Message.unknown = data[m1][1];
+        x22Message.length = data[m1][4];
+        x22Message.data[0] = data[m1][5];
+        x22Message.data[1] = data[m1][6];
+        x22Message.data[2] = data[m1][7];
+        x22Message.data[3] = data[m1][8];
+        x22Message.data[4] = data[m1][9];
+        x22Message.data[5] = data[m1][10];
+        x22Message.data[6] = data[m1][11];
+        x22Message.data[7] = data[m1][12];
+        x22Message.count++;
+    } else if (data[m1][0] == 0x20) {
+        x20Message.id = data[m1][0];
+        x20Message.unknown = data[m1][1];
+        x20Message.length = data[m1][4];
+        x20Message.data[0] = data[m1][5];
+        x20Message.data[1] = data[m1][6];
+        x20Message.data[2] = data[m1][7];
+        x20Message.data[3] = data[m1][8];
+        x20Message.data[4] = data[m1][9];
+        x20Message.data[5] = data[m1][10];
+        x20Message.data[6] = data[m1][11];
+        x20Message.data[7] = data[m1][12];
+        x20Message.count++;
+    } else { // we only want unknown PID's in the databuff
+        for(int i = 0; i < 13; i++) {
+            if (!saved) { dataBuff[m1][i] = data[m1][i]; }
+
+            switch (i) {
+                case 0:
+                    newMessage.id = data[m1][i];
+                    break;
+                case 1:
+                    newMessage.unknown = data[m1][i];
+                    break;
+                case 4:
+                    newMessage.length = data[m1][i];
+                    break;
+                case 5:
+                case 6:
+                case 7:
+                case 8:
+                case 9:
+                case 10:
+                case 11:
+                case 12:
+                    newMessage.data[i - 5] = data[m1][i];
+                    break;
+                default:
+                    break;
+            }
         }
+        // messages can fill the memory up and FAST...
+        canMessages.push(newMessage);
     }
 //    canMessages.push(newMessage);
     digitalWrite(6, HIGH);
@@ -378,6 +676,7 @@ void printDTC()
     }
     Serial.println();
 }
+
 int onlyPrint16 = 0;
 void printout(){
     int offSet;
@@ -404,164 +703,738 @@ void printout(){
     Serial.println();
     onlyPrint16 = 0;
 
-    for(y = 0; y < 8; y++){
-        for(int i = 0; i < (dataBuff[y][4]&0x0F)+5; i++){ //data[y][4] lower nibble is the DLC (data length)
-            //do not print bytes 2 and 3 if STID frame
-//            if(i > 3 || i < 2){
-                if((dataBuff[y][0] == printID) || (all == 1))
-                {
-                    Serial.print(dataBuff[y][i], HEX);
-                    Serial.print(" ");
-                }
-//            }
-        }
-        Serial.print(" ");
-        Serial.print("\t");
+    // start xA0Message
+    Serial.print("xA0Message ");
+    Serial.print(xA0Message.id, HEX);
+    Serial.print(" ");
+    Serial.print(xA0Message.unknown, HEX);
+    Serial.print(" ");
+    Serial.print(xA0Message.unknown2, HEX);
+    Serial.print(" ");
+    Serial.print(xA0Message.length);
+    Serial.print(" ");
+    Serial.print(xA0Message.data[0]);
+    Serial.print(" ");
+    Serial.print(xA0Message.data[1]);
+    Serial.print(" ");
+    Serial.print(xA0Message.data[2]);
+    Serial.print(" ");
+    Serial.print(xA0Message.data[3]); // always 255
+    Serial.print(" ");
+    Serial.print(xA0Message.data[4]); // always 255
+    Serial.print(" ");
+    Serial.print(xA0Message.data[5]); // always 255
+    Serial.print(" ");
+    Serial.print(xA0Message.data[6]); // always 255
+    Serial.print(" ");
+    Serial.print(xA0Message.data[7]); // always 255
+    Serial.print(" ");
+    Serial.print(xA0Message.count);
+    Serial.print("    ACK   ");
+    Serial.println();
+    // done xA0Message
+
+    // start C778FFMessage
+    Serial.print("C778FFMessage ");
+    Serial.print(C778FFMessage.id, HEX);
+    Serial.print(" ");
+    Serial.print(C778FFMessage.unknown, HEX);
+    Serial.print(" ");
+    Serial.print(C778FFMessage.unknown2, HEX);
+    Serial.print(" ");
+    Serial.print(C778FFMessage.length);
+    Serial.print(" ");
+    Serial.print(C778FFMessage.data[0]);
+    Serial.print(" ");
+    Serial.print(C778FFMessage.data[1]);
+    Serial.print(" ");
+    Serial.print(C778FFMessage.data[2]);
+    Serial.print(" ");
+    Serial.print(C778FFMessage.data[3]); // always 255
+    Serial.print(" ");
+    Serial.print(C778FFMessage.data[4]); // always 255
+    Serial.print(" ");
+    Serial.print(C778FFMessage.data[5]); // always 255
+    Serial.print(" ");
+    Serial.print(C778FFMessage.data[6]); // always 255
+    Serial.print(" ");
+    Serial.print(C778FFMessage.data[7]); // always 255
+    Serial.print(" ");
+    Serial.print(C778FFMessage.count);
+    Serial.println();
+    // done C778FFMessage
+
+    // start C7FADFMessage
+    Serial.print("C7FADFMessage ");
+    Serial.print(C7FADFMessage.id, HEX);
+    Serial.print(" ");
+    Serial.print(C7FADFMessage.unknown, HEX);
+    Serial.print(" ");
+    Serial.print(C7FADFMessage.unknown2, HEX);
+    Serial.print(" ");
+    Serial.print(C7FADFMessage.length);
+    Serial.print(" ");
+    Serial.print(C7FADFMessage.data[0]);
+    Serial.print(" ");
+    Serial.print(C7FADFMessage.data[1]);
+    Serial.print(" ");
+    Serial.print(C7FADFMessage.data[2]);
+    Serial.print(" ");
+    Serial.print(C7FADFMessage.data[3]); // always 255
+    Serial.print(" ");
+    Serial.print(C7FADFMessage.data[4]); // always 255
+    Serial.print(" ");
+    Serial.print(C7FADFMessage.data[5]); // always 255
+    Serial.print(" ");
+    Serial.print(C7FADFMessage.data[6]); // always 255
+    Serial.print(" ");
+    Serial.print(C7FADFMessage.data[7]); // always 255
+    Serial.print(" ");
+    Serial.print(C7FADFMessage.count);
+    Serial.println();
+    // done C7FADFMessage
+
+    // start C75BFFMessage
+    Serial.print("C75BFFMessage ");
+    Serial.print(C75BFFMessage.id, HEX);
+    Serial.print(" ");
+    Serial.print(C75BFFMessage.unknown, HEX);
+    Serial.print(" ");
+    Serial.print(C75BFFMessage.unknown2, HEX);
+    Serial.print(" ");
+    Serial.print(C75BFFMessage.length);
+    Serial.print(" ");
+    Serial.print(C75BFFMessage.data[0]);
+    Serial.print(" ");
+    Serial.print(C75BFFMessage.data[1]);
+    Serial.print(" ");
+    Serial.print(C75BFFMessage.data[2]);
+    Serial.print(" ");
+    Serial.print(C75BFFMessage.data[3]); // always 255
+    Serial.print(" ");
+    Serial.print(C75BFFMessage.data[4]); // always 255
+    Serial.print(" ");
+    Serial.print(C75BFFMessage.data[5]); // always 255
+    Serial.print(" ");
+    Serial.print(C75BFFMessage.data[6]); // always 255
+    Serial.print(" ");
+    Serial.print(C75BFFMessage.data[7]); // always 255
+    Serial.print(" ");
+    Serial.print(C75BFFMessage.count);
+    Serial.println();
+    // done C75BFFMessage
+    
+    // start C7980Message
+    Serial.print("C7980Message ");
+    Serial.print(C7980Message.id, HEX);
+    Serial.print(" ");
+    Serial.print(C7980Message.unknown, HEX);
+    Serial.print(" ");
+    Serial.print(C7980Message.unknown2, HEX);
+    Serial.print(" ");
+    Serial.print(C7980Message.length);
+    Serial.print(" ");
+    Serial.print(C7980Message.data[0]);
+    Serial.print(" ");
+    Serial.print(C7980Message.data[1]);
+    Serial.print(" ");
+    Serial.print(C7980Message.data[2]);
+    Serial.print(" ");
+    Serial.print(C7980Message.data[3]); // always 255
+    Serial.print(" ");
+    Serial.print(C7980Message.data[4]); // always 255
+    Serial.print(" ");
+    Serial.print(C7980Message.data[5]); // always 255
+    Serial.print(" ");
+    Serial.print(C7980Message.data[6]); // always 255
+    Serial.print(" ");
+    Serial.print(C7980Message.data[7]); // always 255
+    Serial.print(" ");
+    Serial.print(C7980Message.count);
+    Serial.println();
+    // done C7980Message
+
+    // start C7FAE4Message
+    Serial.print("C7FAE4Message ");
+    Serial.print(C7FAE4Message.id, HEX);
+    Serial.print(" ");
+    Serial.print(C7FAE4Message.unknown, HEX);
+    Serial.print(" ");
+    Serial.print(C7FAE4Message.unknown2, HEX);
+    Serial.print(" ");
+    Serial.print(C7FAE4Message.length);
+    Serial.print(" ");
+    Serial.print(C7FAE4Message.data[0]);
+    Serial.print(" ");
+    Serial.print(C7FAE4Message.data[1]);
+    Serial.print(" ");
+    Serial.print(C7FAE4Message.data[2]);
+    Serial.print(" ");
+    Serial.print(C7FAE4Message.data[3]); // always 255
+    Serial.print(" ");
+    Serial.print(C7FAE4Message.data[4]); // always 255
+    Serial.print(" ");
+    Serial.print(C7FAE4Message.data[5]); // always 255
+    Serial.print(" ");
+    Serial.print(C7FAE4Message.data[6]); // always 255
+    Serial.print(" ");
+    Serial.print(C7FAE4Message.data[7]); // always 255
+    Serial.print(" ");
+    Serial.print(C7FAE4Message.count);
+    Serial.println();
+    // done C7FAE4Message
+
+    // start C7FAEEMessage
+    Serial.print("C7FAEEMessage ");
+    Serial.print(C7FAEEMessage.id, HEX);
+    Serial.print(" ");
+    Serial.print(C7FAEEMessage.unknown, HEX);
+    Serial.print(" ");
+    Serial.print(C7FAEEMessage.unknown2, HEX);
+    Serial.print(" ");
+    Serial.print(C7FAEEMessage.length);
+    Serial.print(" ");
+    Serial.print(C7FAEEMessage.data[0]);
+    Serial.print(" ");
+    Serial.print(C7FAEEMessage.data[1]);
+    Serial.print(" ");
+    Serial.print(C7FAEEMessage.data[2]);
+    Serial.print(" ");
+    Serial.print(C7FAEEMessage.data[3]); // always 255
+    Serial.print(" ");
+    Serial.print(C7FAEEMessage.data[4]); // always 255
+    Serial.print(" ");
+    Serial.print(C7FAEEMessage.data[5]); // always 255
+    Serial.print(" ");
+    Serial.print(C7FAEEMessage.data[6]); // always 255
+    Serial.print(" ");
+    Serial.print(C7FAEEMessage.data[7]); // always 255
+    Serial.print(" ");
+    Serial.print(C7FAEEMessage.count);
+    Serial.println();
+    // done C7FAEEMessage
+
+    // start C7FAEFMessage
+    Serial.print("C7FAEFMessage ");
+    Serial.print(C7FAEFMessage.id, HEX);
+    Serial.print(" ");
+    Serial.print(C7FAEFMessage.unknown, HEX);
+    Serial.print(" ");
+    Serial.print(C7FAEFMessage.unknown2, HEX);
+    Serial.print(" ");
+    Serial.print(C7FAEFMessage.length);
+    Serial.print(" ");
+    Serial.print(C7FAEFMessage.data[0]);
+    Serial.print(" ");
+    Serial.print(C7FAEFMessage.data[1]);
+    Serial.print(" ");
+    Serial.print(C7FAEFMessage.data[2]);
+    Serial.print(" ");
+    Serial.print(C7FAEFMessage.data[3]); // changes with throttle
+    Serial.print(" ");
+    Serial.print(C7FAEFMessage.data[4]); // always 255
+    Serial.print(" ");
+    Serial.print(C7FAEFMessage.data[5]); // always 255
+    Serial.print(" ");
+    Serial.print(C7FAEFMessage.data[6]); // always 0
+    Serial.print(" ");
+    Serial.print(C7FAEFMessage.data[7]); // always 255
+    Serial.print(" Count: ");
+    Serial.print(C7FAEFMessage.count);
+    Serial.print(" Guess? ");
+    Serial.print(C7FAEFMessage.data[3] * 4 / 6.895); // OIL PRESSURE!!!
+    oilPressure = C7FAEFMessage.data[3] * 4 / 6.895;
+    Serial.println();
+    // done C7FAEFMessage
+
+    // start C7FAF1Message
+    Serial.print("C7FAF1Message ");
+    Serial.print(C7FAF1Message.id, HEX);
+    Serial.print(" ");
+    Serial.print(C7FAF1Message.unknown, HEX);
+    Serial.print(" ");
+    Serial.print(C7FAF1Message.unknown2, HEX);
+    Serial.print(" ");
+    Serial.print(C7FAF1Message.length);
+    Serial.print(" ");
+    Serial.print(C7FAF1Message.data[0]);
+    Serial.print(" ");
+    Serial.print(C7FAF1Message.data[1]);
+    Serial.print(" ");
+    Serial.print(C7FAF1Message.data[2]);
+    Serial.print(" ");
+    Serial.print(C7FAF1Message.data[3]); // always 255
+    Serial.print(" ");
+    Serial.print(C7FAF1Message.data[4]); // always 255
+    Serial.print(" ");
+    Serial.print(C7FAF1Message.data[5]); // always 255
+    Serial.print(" ");
+    Serial.print(C7FAF1Message.data[6]); // always 255
+    Serial.print(" ");
+    Serial.print(C7FAF1Message.data[7]); // always 255
+    Serial.print(" ");
+    Serial.print(C7FAF1Message.count);
+    Serial.println();
+    // done C7FAF1Message
+
+    // start C7FAF2Message
+    Serial.print("C7FAF2Message ");
+    Serial.print(C7FAF2Message.id, HEX);
+    Serial.print(" ");
+    Serial.print(C7FAF2Message.unknown, HEX);
+    Serial.print(" ");
+    Serial.print(C7FAF2Message.unknown2, HEX);
+    Serial.print(" ");
+    Serial.print(C7FAF2Message.length);
+    Serial.print(" ");
+    Serial.print(C7FAF2Message.data[0]);
+    Serial.print(" ");
+    Serial.print(C7FAF2Message.data[1]);
+    Serial.print(" ");
+    Serial.print(C7FAF2Message.data[2]);
+    Serial.print(" ");
+    Serial.print(C7FAF2Message.data[3]); // always 255
+    Serial.print(" ");
+    Serial.print(C7FAF2Message.data[4]); // always 255
+    Serial.print(" ");
+    Serial.print(C7FAF2Message.data[5]); // always 255
+    Serial.print(" ");
+    Serial.print(C7FAF2Message.data[6]); // always 255
+    Serial.print(" ");
+    Serial.print(C7FAF2Message.data[7]); // always 255
+    Serial.print(" ");
+    Serial.print(C7FAF2Message.count);
+    Serial.println();
+    // done C7FAF2Message
+
+    // start C7FAF5Message
+    Serial.print("C7FAF5Message ");
+    Serial.print(C7FAF5Message.id, HEX);
+    Serial.print(" ");
+    Serial.print(C7FAF5Message.unknown, HEX);
+    Serial.print(" ");
+    Serial.print(C7FAF5Message.unknown2, HEX);
+    Serial.print(" ");
+    Serial.print(C7FAF5Message.length);
+    Serial.print(" ");
+    Serial.print(C7FAF5Message.data[0]);
+    Serial.print(" ");
+    Serial.print(C7FAF5Message.data[1]);
+    Serial.print(" ");
+    Serial.print(C7FAF5Message.data[2]);
+    Serial.print(" ");
+    Serial.print(C7FAF5Message.data[3]); // always 255
+    Serial.print(" ");
+    Serial.print(C7FAF5Message.data[4]); // always 255
+    Serial.print(" ");
+    Serial.print(C7FAF5Message.data[5]); // always 255
+    Serial.print(" ");
+    Serial.print(C7FAF5Message.data[6]); // always 255
+    Serial.print(" ");
+    Serial.print(C7FAF5Message.data[7]); // always 255
+    Serial.print(" ");
+    Serial.print(C7FAF5Message.count);
+    Serial.println();
+    // done C7FAF5Message
+
+    // start x675A0Message
+    Serial.print("x675A0Message ");
+    Serial.print(x675A0Message.id, HEX);
+    Serial.print(" ");
+    Serial.print(x675A0Message.unknown, HEX);
+    Serial.print(" ");
+    Serial.print(x675A0Message.unknown2, HEX);
+    Serial.print(" ");
+    Serial.print(x675A0Message.length);
+    Serial.print(" ");
+    Serial.print(x675A0Message.data[0]);
+    Serial.print(" ");
+    Serial.print(x675A0Message.data[1]);
+    Serial.print(" ");
+    Serial.print(x675A0Message.data[2]);
+    Serial.print(" ");
+    Serial.print(x675A0Message.data[3]); // always 255
+    Serial.print(" ");
+    Serial.print(x675A0Message.data[4]); // always 255
+    Serial.print(" ");
+    Serial.print(x675A0Message.data[5]); // always 255
+    Serial.print(" ");
+    Serial.print(x675A0Message.data[6]); // always 255
+    Serial.print(" ");
+    Serial.print(x675A0Message.data[7]); // always 255
+    Serial.print(" ");
+    Serial.print(x675A0Message.count);
+    Serial.println();
+    // done x675A0Message
+
+    // start x67983Message
+    Serial.print("x67983Message ");
+    Serial.print(x67983Message.id, HEX);
+    Serial.print(" ");
+    Serial.print(x67983Message.unknown, HEX);
+    Serial.print(" ");
+    Serial.print(x67983Message.unknown2, HEX);
+    Serial.print(" ");
+    Serial.print(x67983Message.length);
+    Serial.print(" ");
+    Serial.print(x67983Message.data[0]);
+    Serial.print(" ");
+    Serial.print(x67983Message.data[1]);
+    Serial.print(" ");
+    Serial.print(x67983Message.data[2]);
+    Serial.print(" ");
+    Serial.print(x67983Message.data[3]); // always 255
+    Serial.print(" ");
+    Serial.print(x67983Message.data[4]); // always 255
+    Serial.print(" ");
+    Serial.print(x67983Message.data[5]); // always 255
+    Serial.print(" ");
+    Serial.print(x67983Message.data[6]); // always 255
+    Serial.print(" ");
+    Serial.print(x67983Message.data[7]); // always 255
+    Serial.print(" ");
+    Serial.print(x67983Message.count);
+    Serial.println();
+    // done x67983Message
+
+    // start x67984Message
+    Serial.print("x67984Message ");
+    Serial.print(x67984Message.id, HEX);
+    Serial.print(" ");
+    Serial.print(x67984Message.unknown, HEX);
+    Serial.print(" ");
+    Serial.print(x67984Message.unknown2, HEX);
+    Serial.print(" ");
+    Serial.print(x67984Message.length);
+    Serial.print(" ");
+    Serial.print(x67984Message.data[0]);
+    Serial.print(" ");
+    Serial.print(x67984Message.data[1]);
+    Serial.print(" ");
+    Serial.print(x67984Message.data[2]);
+    Serial.print(" ");
+    Serial.print(x67984Message.data[3]); // rpm
+    Serial.print(" ");
+    Serial.print(x67984Message.data[4]); // rpm
+    Serial.print(" ");
+    Serial.print(x67984Message.data[5]); // always 255
+    Serial.print(" ");
+    Serial.print(x67984Message.data[6]); // always 255
+    Serial.print(" ");
+    Serial.print(x67984Message.data[7]); // always 255
+    Serial.print(" ");
+    Serial.print(x67984Message.count);
+    Serial.print(" RPM: ");
+    Serial.print(((x67984Message.data[4] << 8) | x67984Message.data[3]) / 8); // rpm again :(
+    Serial.println();
+    // done x67984Message
+
+    // start x67983Message
+    Serial.print("C7FAF0Message ");
+    Serial.print(C7FAF0Message.id, HEX);
+    Serial.print(" ");
+    Serial.print(C7FAF0Message.unknown, HEX);
+    Serial.print(" ");
+    Serial.print(C7FAF0Message.unknown2, HEX);
+    Serial.print(" ");
+    Serial.print(C7FAF0Message.length);
+    Serial.print(" ");
+    Serial.print(C7FAF0Message.data[0]);
+    Serial.print(" ");
+    Serial.print(C7FAF0Message.data[1]);
+    Serial.print(" ");
+    Serial.print(C7FAF0Message.data[2]);
+    Serial.print(" ");
+    Serial.print(C7FAF0Message.data[3]);
+    Serial.print(" ");
+    Serial.print(C7FAF0Message.data[4]);
+    Serial.print(" ");
+    Serial.print(C7FAF0Message.data[5]);
+    Serial.print(" ");
+    Serial.print(C7FAF0Message.data[6]);
+    Serial.print(" ");
+    Serial.print(C7FAF0Message.data[7]);
+    Serial.print(" ");
+    Serial.print(C7FAF0Message.count);
+    Serial.println();
+    // done C7FAF0Message
+
+    // start C7FBE0Message
+    Serial.print("C7FBE0Message ");
+    Serial.print(C7FBE0Message.id, HEX);
+    Serial.print(" ");
+    Serial.print(C7FBE0Message.unknown, HEX);
+    Serial.print(" ");
+    Serial.print(C7FBE0Message.unknown2, HEX);
+    Serial.print(" ");
+    Serial.print(C7FBE0Message.length);
+    Serial.print(" ");
+    Serial.print(C7FBE0Message.data[0]);
+    Serial.print(" ");
+    Serial.print(C7FBE0Message.data[1]);
+    Serial.print(" ");
+    Serial.print(C7FBE0Message.data[2]);
+    Serial.print(" ");
+    Serial.print(C7FBE0Message.data[3]);
+    Serial.print(" ");
+    Serial.print(C7FBE0Message.data[4]);
+    Serial.print(" ");
+    Serial.print(C7FBE0Message.data[5]);
+    Serial.print(" ");
+    Serial.print(C7FBE0Message.data[6]);
+    Serial.print(" ");
+    Serial.print(C7FBE0Message.data[7]);
+    Serial.print(" ");
+    Serial.print(C7FBE0Message.count);
+    // Confidence in PID, 1%
+    // Confidence in Math, 0%
+    throttlePercentage = (C7FBE0Message.data[1] * 256) + C7FBE0Message.data[0];
+    throttlePercentage /= 256;
+    throttlePercentage -= 24;
+//    throttlePercentage *= (100/255);
+    throttlePercentage /= 3;
+
+    // Confidence in PID, 0%
+    // Confidence in Math, 0%
+    ait = C7FBE0Message.data[2];
+    ait -= 40;
+//        ait /= 256;
+//        ait -= 273.15;
+//        ait = ait * 9 / 5 + 32;
+    Serial.println();
+    // end C7FBE0Message
+
+    //parse the 0x22 message
+    Serial.print("x22Message ");
+    Serial.print(x22Message.id, HEX);
+    Serial.print(" ");
+    Serial.print(x22Message.unknown, HEX);
+    Serial.print(" ");
+    Serial.print(x22Message.unknown2, HEX);
+    Serial.print(" ");
+    Serial.print(x22Message.length);
+    Serial.print(" ");
+    Serial.print(x22Message.data[0]);
+    Serial.print(" ");
+    Serial.print(x22Message.data[1]);
+    Serial.print(" ");
+    Serial.print(x22Message.data[2]);
+    Serial.print(" ");
+    Serial.print(x22Message.data[3]);
+    Serial.print(" ");
+    Serial.print(x22Message.data[4]);
+    Serial.print(" ");
+    Serial.print(x22Message.data[5]);
+    Serial.print(" ");
+    Serial.print(x22Message.data[6]);
+    Serial.print(" ");
+    Serial.print(x22Message.data[7]);
+    Serial.print(" ");
+    Serial.print(x22Message.count);
+    if(x22Message.data[0] == 0x0C)
+    {
+        Serial.print(" idle val sw crank - NR "); //Idle validation switch in TPS goes to IP for fault protection
+    }
+    if(x22Message.data[0] == 0x04)
+    {
+        Serial.print(" idle val sw acc pedal up  ");
+    }
+    if(x22Message.data[0] == 0x00)
+    {
+        Serial.print(" idle val sw acc pedal pressed ");
+    }
+
+    // This byte changes from 0 to 1 after a delay. Seems to check if the timing advance mechanism is
+    // able to match the commanded timing value
+    ((x22Message.data[1] & 0x01) == 0x00) ? Serial.print(" timing locked ") : Serial.print(" timing error ");
+
+    //cylinder counter is high nibble of byte 8. Lower nibble changes from 0 to 3 when running
+    counter = ((x22Message.data[3] >> 4) / 2) + 1; //decode; counts by even numbers
+    if(!(x22Message.data[3] & 0x03))
+    {
+        counter = 0;    //not running
+    }
+    Serial.print(" counter ");
+    Serial.print(counter);
+
+    Serial.print(" RPM range ");
+    Serial.print(x22Message.data[3] & 0x0F);
+
+    //bytes 4 and 5 are RPM again
+
+    //Not sure about this compute fuel temp in Inj Pump
+    // Confidence this is the correct PID, 100%
+    // Confidence in the math, 100%
+    // raw  F as reported by my quadzilla
+    // 4984 100
+    // 4989 101
+    // 4999 102
+    // 5006 103
+    //
+    //
+    // 5034 106
+    // 5041 107
+    // 5051 108
+    // 5065 109
+    fuelTemp = (x22Message.data[7] << 8) | x22Message.data[6]; // Raw
+    Serial.print(" Fuel temp F Raw: ");
+    Serial.print(x22Message.data[7]);
+    fuelTemp = fuelTemp / 16; // Kelvin
+    fuelTemp = fuelTemp - 273.15; // Celsius
+    fuelTemp = ((fuelTemp * 9) / 5) + 32; // Fahrenheit
+    Serial.print(" F: ");
+    Serial.print(fuelTemp);
+
+    Serial.println();
+    // 0x22 done
+
+    // 0xA2 start
+    Serial.print("xA2Message ");
+    Serial.print(xA2Message.id, HEX);
+    Serial.print(" ");
+    Serial.print(xA2Message.unknown, HEX);
+    Serial.print(" ");
+    Serial.print(xA2Message.unknown2, HEX);
+    Serial.print(" ");
+    Serial.print(xA2Message.length);
+    Serial.print(" ");
+    Serial.print(xA2Message.data[0]);
+    Serial.print(" ");
+    Serial.print(xA2Message.data[1]);
+    Serial.print(" ");
+    Serial.print(xA2Message.data[2]);
+    Serial.print(" ");
+    Serial.print(xA2Message.data[3]);
+    Serial.print(" ");
+    Serial.print(xA2Message.data[4]);
+    Serial.print(" ");
+    Serial.print(xA2Message.data[5]);
+    Serial.print(" ");
+    Serial.print(xA2Message.data[6]);
+    Serial.print(" ");
+    Serial.print(xA2Message.data[7]);
+    Serial.print(" ");
+    Serial.print(xA2Message.count);
+    //second message from IP has other stuff in it.
+    offSet = (xA2Message.data[1] << 8) | xA2Message.data[0];
+    Serial.print(" Offset? ");
+    Serial.print(offSet);
+
+    // 8 and 7 maybe oil pressure?
+    Serial.print(" oilPressure? Raw8: ");
+    Serial.print(xA2Message.data[3]);
+    Serial.print(" Raw7: ");
+    Serial.print(xA2Message.data[2]);
+    // Lets try the fuel pressure obd2 math, pid 0A
+//    oilPressure = (xA2Message.data[3] << 8 ) | (xA2Message.data[2]);
+//    oilPressure /= 3;
+//    Serial.print(" Guess: ");
+//    Serial.print(oilPressure);
+
+    // not sure if these are volts are not
+    // Maybe AIT? Not climbing as AIT does
+    Serial.print(" volts? Raw10: ");
+    Serial.print(xA2Message.data[5]);
+    Serial.print(" Raw9: ");
+    Serial.print(xA2Message.data[4]);
+    volts = (xA2Message.data[5] << 4) | xA2Message.data[4];
+//            volts = volts / 6.7; // 6.7 seems close to water temp NOPE
+//            volts = ((volts * 9) / 5) + 32;
+    volts = volts / 35;
+//            ait = volts;
+    Serial.print(" Volts ");
+    Serial.print(volts,1);
+
+    // 11 and 12 seem to be AIT?
+    offSet = (xA2Message.data[7] << 8) | xA2Message.data[6];
+    offSet = offSet / 16;
+    offSet = offSet - 273.15;
+    offSet = ((offSet * 9) / 5) + 32;
+//            offSet = offSet / 100;
+//            offSet = ((offSet * 9) / 5) + 32;
+    Serial.print(" AIT? ");
+    Serial.print(offSet);
+
+    //TODO Other stuff to figure out
+    Serial.println();
+    //0xA2 done
+
+    // 0x20 start
+    Serial.print("x20Message ");
+    Serial.print(x20Message.id, HEX);
+    Serial.print(" ");
+    Serial.print(x20Message.unknown, HEX);
+    Serial.print(" ");
+    Serial.print(x20Message.unknown2, HEX);
+    Serial.print(" ");
+    Serial.print(x20Message.length);
+    Serial.print(" ");
+    Serial.print(x20Message.data[0]);
+    Serial.print(" ");
+    Serial.print(x20Message.data[1]);
+    Serial.print(" ");
+    Serial.print(x20Message.data[2]);
+    Serial.print(" ");
+    Serial.print(x20Message.data[3]);
+    Serial.print(" ");
+    Serial.print(x20Message.data[4]);
+    Serial.print(" ");
+    Serial.print(x20Message.data[5]);
+    Serial.print(" ");
+    Serial.print(x20Message.data[6]);
+    Serial.print(" ");
+    Serial.print(x20Message.data[7]);
+    Serial.print(" ");
+    Serial.print(x20Message.count);
+    //this is the reply from the ECM to the IP fuel / timing request message
+    // Fuel command for the next cylinder in firing order.
+    if(counter)
+    {
+        Serial.print(" cylinder ");
+        Serial.print(fireBuff[y]);
+    }
+
+    //Fuel compute
+    FuelPCT = (x20Message.data[1] << 8) | x20Message.data[0];
+    FuelPCT = (float)(FuelPCT*100) / 4096;    // 4095 is max fuel allowed by pump
+    Serial.print(" Fuel percent ");
+    Serial.print(FuelPCT, 1);
+
+    // compute timing advance
+    Timing = (x20Message.data[5] << 8) | x20Message.data[4]; //convert from little endian. 128 bits per degree.
+    Timing = (float)((Timing) / 128);      //
+    Serial.print(" Timing deg ");
+    Serial.print(Timing, 1);
+
+    //compute RPM from ID 20xx bytes 11 and 12
+    RPM = (x20Message.data[7] << 8) | x20Message.data[6];     //convert from little endian
+    RPM = RPM/4 ;                           //divide by 4
+    Serial.print(" RPM ");
+    Serial.print(RPM);
+    if(RPM > 1050){threeCyl = 0;}  //disable 3 cyclinder mode if rev'd
+    Serial.println();
+    //0x20 done
+
+    // unknown PIDs
+//    for(y = 0; y < 8; y++){
+//        for(int i = 0; i < (dataBuff[y][4]&0x0F)+5; i++){ //data[y][4] lower nibble is the DLC (data length)
+//            //do not print bytes 2 and 3 if STID frame
+////            if(i > 3 || i < 2){
+//                if((dataBuff[y][0] == printID) || (all == 1))
+//                {
+//                    Serial.print(dataBuff[y][i], HEX);
+//                    Serial.print(" ");
+//                }
+////            }
+//        }
+//        Serial.print(" ");
+//        Serial.print("\t");
         //determine message direction. Pump messages have 0x40 in byte 1.
         // (dataBuff[y][1] == 0x40) ? Serial.print(" P >> E ") : Serial.print(" E >> P ");
         //  Serial.print(timeStampM[y]);
         //  Serial.print(" diff ");
         //wrap around buffer 8 deep
         //  (y != 0) ? Serial.print(timeStampM[y] - timeStampM[y-1]) : Serial.print(timeStampM[7] - timeStampM[0]);
-
-        //parse the 0x22 message
-        if(dataBuff[y][0] == 0x22)
-        {
-            if(dataBuff[y][5] == 0x0C)
-            {
-                Serial.print(" idle val sw crank - NR "); //Idle validation switch in TPS goes to IP for fault protection
-            }
-            if(dataBuff[y][5] == 0x04)
-            {
-                Serial.print(" idle val sw acc pedal up  ");
-            }
-            if(dataBuff[y][5] == 0x00)
-            {
-                Serial.print(" idle val sw acc pedal pressed ");
-            }
-
-            // This byte changes from 0 to 1 after a delay. Seems to check if the timing advance mechanism is
-            // able to match the commanded timing value
-            ((dataBuff[y][6] & 0x01) == 0x00) ? Serial.print(" timing locked ") : Serial.print(" timing error ");
-
-            //cylinder counter is high nibble of byte 8. Lower nibble changes from 0 to 3 when running
-            counter = ((dataBuff[y][8] >> 4) / 2) + 1; //decode; counts by even numbers
-            if(!(dataBuff[y][8] & 0x03))
-            {
-                counter = 0;    //not running
-            }
-            Serial.print(" counter ");
-            Serial.print(counter);
-
-            Serial.print(" RPM range ");
-            Serial.print(dataBuff[y][8] & 0x0F);
-
-            //bytes 9 and 10 are RPM again
-
-            //Not sure about this compute fuel temp in Inj Pump
-            // Confidence this is the correct PID, 100%
-            // Confidence in the math, 25%
-            // raw  F as reported by my quadzilla
-            // 4984 100
-            // 4989 101
-            // 4999 102
-            // 5006 103
-            //
-            //
-            // 5034 106
-            // 5041 107
-            // 5051 108
-            // 5065 109
-            fuelTemp = (dataBuff[y][12] << 8) | dataBuff[y][11]; // Raw
-            Serial.print(" Fuel temp F Raw: ");
-            Serial.print(fuelTemp);
-            fuelTemp = fuelTemp / 16; // Kelvin
-            fuelTemp = fuelTemp - 273.15; // Celsius
-            fuelTemp = ((fuelTemp * 9) / 5) + 32; // Fahrenheit
-            Serial.print(" F: ");
-            Serial.print(fuelTemp);
-
-
-        }// 0x22 done
-
-
-        //this is the reply from the ECM to the IP fuel / timing request message
-        if(dataBuff[y][0] == 0x20)
-        {
-            // Fuel command for the next cylinder in firing order.
-            if(counter)
-            {
-                Serial.print(" cylinder ");
-                Serial.print(fireBuff[y]);
-            }
-
-            //Fuel compute
-            FuelPCT = (dataBuff[y][6] << 8) | dataBuff[y][5];
-            FuelPCT = (float)(FuelPCT*100) / 4096;    // 4095 is max fuel allowed by pump
-            Serial.print(" Fuel percent ");
-            Serial.print(FuelPCT, 1);
-
-
-
-            // compute timing advance
-            Timing = (dataBuff[y][10] << 8) | dataBuff[y][9]; //convert from little endian. 128 bits per degree.
-            Timing = (float)((Timing) / 128);      //
-            Serial.print(" Timing deg ");
-            Serial.print(Timing, 1);
-
-            //compute RPM from ID 20xx bytes 11 and 12
-            RPM = (dataBuff[y][12] << 8) | dataBuff[y][11];     //convert from little endian
-            RPM = RPM/4 ;                           //divide by 4
-            Serial.print(" RPM ");
-            Serial.print(RPM);
-            if(RPM > 1050){threeCyl = 0;}  //disable 3 cyclinder mode if rev'd
-        }//0x20 done
-
-        //second message from IP has other stuff in it.
-        if(dataBuff[y][0] == 0xA2)
-        {
-            offSet = (dataBuff[y][6] << 8) | dataBuff[y][5];
-            Serial.print(" Offset? ");
-            Serial.print(offSet);
-
-            // 8 and 7 maybe throttle percentage? maybe oil pressure?
-            Serial.print(" Oil Pressure? Raw8: ");
-            Serial.print(dataBuff[y][8]);
-            Serial.print(" Raw7: ");
-            Serial.print(dataBuff[y][7]);
-            // Lets try the fuel pressure obd2 math, pid 0A
-            throttlePercentage = (dataBuff[y][8]  ) | (dataBuff[y][7] * 3);
-//            throttlePercentage = map(throttlePercentage, 0, 765, 0, 100);
-            Serial.print(" Guess: ");
-            Serial.print(throttlePercentage);
-
-            // not sure if these are volts are not
-            // Maybe AIT? Not climing as AIT does
-            Serial.print(" volts? Raw10: ");
-            Serial.print(dataBuff[y][10]);
-            Serial.print(" Raw9: ");
-            Serial.print(dataBuff[y][9]);
-            volts = (dataBuff[y][10] << 4) | dataBuff[y][9];
-//            volts = volts / 6.7; // 6.7 seems close to water temp NOPE
-//            volts = ((volts * 9) / 5) + 32;
-            volts = volts / 35;
-            ait = volts;
-            Serial.print(" Volts ");
-            Serial.print(volts,1);
-
-            // 11 and 12 seem to be AIT?
-            offSet = (dataBuff[y][12] << 8) | dataBuff[y][11];
-            offSet = offSet / 16;
-            offSet = offSet - 273.15;
-            offSet = ((offSet * 9) / 5) + 32;
-//            offSet = offSet / 100;
-//            offSet = ((offSet * 9) / 5) + 32;
-            Serial.print(" AIT? ");
-            Serial.print(offSet);
-
-            //TODO Other stuff to figure out
-
-        }//0xA2 done
 
 //        if(dataBuff[y][0] == 0x67) {
 //            Serial.print(" THIS'N! 1: " + (String)dataBuff[y][1] + " 2: "+ (String)dataBuff[y][2] + " 3: "+ (String)dataBuff[y][3] + " 4: "+ (String)dataBuff[y][4] + " 5: "+ (String)dataBuff[y][5] + " 6: "+ (String)dataBuff[y][6] + " 7: "+ (String)dataBuff[y][7] + " 8: "+ (String)dataBuff[y][8] + " 9: "+ (String)dataBuff[y][9] + " 10: "+ (String)dataBuff[y][10] + " 11: "+ (String)dataBuff[y][11] + " 12: "+ (String)dataBuff[y][12]);
@@ -570,30 +1443,40 @@ void printout(){
 //            oilPressure = dataBuff[y][3];
 //        }
 
-        // Confidence in PID, 99%
-        // Confidence in Math, 20%
-        if(dataBuff[y][0] == 0xC7 && dataBuff[y][1] == 0xFB) {
-            oilPressure = (dataBuff[y][6] * 256) + dataBuff[y][5];
-            oilPressure /= 256;
-        }
+//        if(dataBuff[y][0] == 0xC7 && dataBuff[y][1] == 0xFB) {
+//            // Confidence in PID, 99%
+//            // Confidence in Math, 20%
+//            oilPressure = (dataBuff[y][6] * 256) + dataBuff[y][5];
+//            oilPressure /= 256;
+//
+//            // Confidence in PID, 0%
+//            // Confidence in Math, 0%
+////            ait = (float)(dataBuff[y][12] * 256) + (float)dataBuff[y][11];
+//                ait = dataBuff[y][7];
+//                ait -= 40;
+////            ait /= 256;
+////            ait -= 273.15;
+////            ait = ait * 9 / 5 + 32;
+//        }
 
-        if(dataBuff[y][0] == 0x67 && dataBuff[y][1] == 0x98 && dataBuff[y][4] == 0x8 && dataBuff[y][5] == 0xF0 && dataBuff[y][9] != 0xFF) {
+//        if(dataBuff[y][0] == 0x67 && dataBuff[y][1] == 0x98 && dataBuff[y][4] == 0x8 && dataBuff[y][5] == 0xF0 && dataBuff[y][9] != 0xFF) {
             // 6 and 7 always seem to be the same bit, maybe this has meaning?
             // didn't show up on startup until I pressed the throttle :thinking:
             // also seems to stop when the throttle is pressed and show back up when you take your foot off
 //            waterTemp = (dataBuff[y][9] << 4) | (dataBuff[y][8]);
 //            waterTemp = waterTemp / 1000;
 //            waterTemp = ((waterTemp * 9) / 5) + 32;
-        }
+//        }
 
         //This message from the ECM is mostly static
-        if(dataBuff[y][0] == 0xA0)
-        {
-            Serial.print(" ACK ");
-        }
-        Serial.println();
-    }
+//        if(dataBuff[y][0] == 0xA0)
+//        {
+//            Serial.print(" ACK ");
+//        }
+//        Serial.println();
+//    }
     Serial.println();
+    // end unknowns
 
 }   //print out done
 
@@ -837,27 +1720,48 @@ void ISR_trig1()
 
 void updateLcd() {
     char buffer [21];
+    // row 1
     lcd.setCursor(0,0);
-    lcd.print("Oil Press AIT F");
-    lcd.setCursor(0,1);
-    lcd.print("                    ");
-    lcd.setCursor(0,1);
-//    snprintf(buffer, sizeof(buffer), "%4d      ", oilPressure);
-    lcd.print(oilPressure);
-    lcd.setCursor(11,1);
-//    snprintf(buffer, sizeof(buffer), "%.1f", 27.777);
-//    lcd.print(ait);
-    lcd.setCursor(0,2);
-    lcd.print("RPM:      Fuel Temp ");
-    lcd.setCursor(0,3);
-    lcd.print("                    ");
-    lcd.setCursor(0,3);
-//    snprintf(buffer, sizeof(buffer), "%4d      ", RPM);
-    lcd.print(RPM);
-    lcd.setCursor(11,3);
-//    snprintf(buffer, sizeof(buffer), "%4d", fuelTemp);
-    lcd.print(fuelTemp);
+    dtostrf(throttlePercentage, 5, 0, buffer);
+    lcd.print(buffer);
+    dtostrf(oilPressure, 5, 0, buffer);
+    lcd.print(buffer);
+//    dtostrf((C7FAF6Message.data[2] << 8) | C7FAF6Message.data[1], 5, 0, buffer);
+    lcd.print(buffer);
 
+    // row 2
+    lcd.setCursor(0,1);
+    dtostrf(C7FAF7Message.data[6], 5, 0, buffer);
+    lcd.print(buffer);
+    dtostrf(C7FAF7Message.data[7], 5, 0, buffer);
+    lcd.print(buffer);
+    float testytest = (C7FBE0Message.data[3] << 8) | C7FBE0Message.data[2];
+    testytest /= 16;
+    dtostrf(testytest, 5, 0, buffer);
+    lcd.print(buffer);
+
+    // row 3
+    lcd.setCursor(0,2);
+    dtostrf(C7FBE0Message.data[0], 5, 0, buffer);
+    lcd.print(buffer);
+    dtostrf((C7FBE0Message.data[1] - 24) * 100 / 256, 5, 0, buffer);
+    lcd.print(buffer);
+    dtostrf(C7FBE0Message.data[2], 5, 0, buffer);
+    lcd.print(buffer);
+    dtostrf(C7FBE0Message.data[3], 5, 0, buffer);
+    lcd.print(buffer);
+
+
+    // row 4
+    lcd.setCursor(0,3);
+    dtostrf(C7FBE0Message.data[4], 5, 0, buffer);
+    lcd.print(buffer);
+    dtostrf(C7FBE0Message.data[5], 5, 0, buffer);
+    lcd.print(buffer);
+    dtostrf(C7FBE0Message.data[6], 5, 0, buffer);
+    lcd.print(buffer);
+    dtostrf(C7FBE0Message.data[7], 5, 0, buffer);
+    lcd.print(buffer);
 }
 
 void loop() {
