@@ -209,23 +209,23 @@ int counter1;
 int killCyl;
 int threeCyl;
 
-void writeRegister(int CS, byte thisRegister, byte thisValue) {
+void writeRegister(int CSpin, byte thisRegister, byte thisValue) {
     // take the chip select low to select the device:
-    digitalWrite(CS, LOW);
-    SPI.transfer(0x02);         //write register command (02)
-    SPI.transfer(thisRegister); //Send register address
-    SPI.transfer(thisValue);  //Send value to record into register
+    digitalWrite(CSpin, LOW);
+    SPIClass::transfer(0x02);         //write register command (02)
+    SPIClass::transfer(thisRegister); //Send register address
+    SPIClass::transfer(thisValue);  //Send value to record into register
     // take the chip select high to de-select:
-    digitalWrite(CS, HIGH);
+    digitalWrite(CSpin, HIGH);
 }
 
-byte readRegister(int CS, byte thisRegister) {
+byte readRegister(int CSpin, byte thisRegister) {
     byte result = 0;
-    digitalWrite(CS, LOW);
-    SPI.transfer(0x03);                 //read register command (03)
-    SPI.transfer(thisRegister);
-    result = SPI.transfer(0x00);        //shift out dummy byte (00) so "thisRegister" gets clocked into result
-    digitalWrite(CS, HIGH);
+    digitalWrite(CSpin, LOW);
+    SPIClass::transfer(0x03);                 //read register command (03)
+    SPIClass::transfer(thisRegister);
+    result = SPIClass::transfer(0x00);        //shift out dummy byte (00) so "thisRegister" gets clocked into result
+    digitalWrite(CSpin, HIGH);
     return result;
 }
 
@@ -300,9 +300,9 @@ void ISR_trig0(){
     //RECEIVE interrupt CAN 1, buffers up to 4 messages, 16 bytes per message, only 13 bytes are used, m1 is the message pointer
 
     digitalWrite(6, LOW);
-    SPI.transfer(0x90);   //read buffer 0 Command. also clears the CAN module interrupt flag
+    SPIClass::transfer(0x90);   //read buffer 0 Command. also clears the CAN module interrupt flag
     for(int i = 0; i < 13; i++){
-        data[m1][i] = SPI.transfer(0x00);
+        data[m1][i] = SPIClass::transfer(0x00);
     }
 
     if (data[m1][0] == 0xC7 && data[m1][1] == 0x78 && data[m1][2] == 0xFF) {
@@ -625,16 +625,16 @@ void ISR_trig0(){
         }
 
         digitalWrite(6,LOW);
-        SPI.transfer(0x40);           //load tx buffer 0 CMD
+        SPIClass::transfer(0x40);           //load tx buffer 0 CMD
         for(int i = 0; i< 13; i++){
-            SPI.transfer(data[m1][i]); //copy each byte that came in and substitute the modified bytes
+            SPIClass::transfer(data[m1][i]); //copy each byte that came in and substitute the modified bytes
         }
         digitalWrite(6,HIGH);
 
         //send the transmit buffer, all bytes
         //RTS tx buffer 0
         digitalWrite(6, LOW);
-        SPI.transfer(0x81);   //RTS command
+        SPIClass::transfer(0x81);   //RTS command
         digitalWrite(6, HIGH);
 
     }
@@ -680,8 +680,8 @@ void printDTC()
     Serial.println();
 }
 
-int minLoad = 255;
-int maxLoad = 0;
+int min = 255;
+int max = 0;
 int onlyPrint16 = 0;
 void printout(){
     int offSet;
@@ -830,6 +830,7 @@ void printout(){
     // done C75BFFMessage
     
     // start C7980Message
+    // static
     Serial.print("C7980Message ");
     Serial.print(C7980Message.id, HEX);
     Serial.print(" ");
@@ -1068,16 +1069,16 @@ void printout(){
     Serial.print(" ");
     Serial.print(x675A0Message.data[2]);
     Serial.print(" ");
-    Serial.print(x675A0Message.data[3]);
+    Serial.print(x675A0Message.data[3]); // always 0
     Serial.print(" ");
-    Serial.print(x675A0Message.data[4]);
+    Serial.print(x675A0Message.data[4]); // almost always 0
     Serial.print(" ");
     Serial.print(x675A0Message.data[5]);
     Serial.print(" ");
     Serial.print(x675A0Message.data[6]); // rpm
     Serial.print(" ");
     Serial.print(x675A0Message.data[7]); // rpm
-    Serial.print(" ");
+    Serial.print(" Count: ");
     Serial.print(x675A0Message.count);
     Serial.print(" RPM: ");
     Serial.print(((x675A0Message.data[7] << 8) | x675A0Message.data[6]) / 4);
@@ -1096,9 +1097,9 @@ void printout(){
     Serial.print(" ");
     Serial.print(x67983Message.data[0]); // 24x
     Serial.print(" ");
-    Serial.print(x67983Message.data[1]); // maybe throttle ?
+    Serial.print(x67983Message.data[1]); // Throttle!!!!!!!!
     Serial.print(" ");
-    Serial.print(x67983Message.data[2]); // maybe throttle ?
+    Serial.print(x67983Message.data[2]); // not throttle lol
     Serial.print(" ");
     Serial.print(x67983Message.data[3]); // always 255
     Serial.print(" ");
@@ -1111,6 +1112,19 @@ void printout(){
     Serial.print(x67983Message.data[7]); // always 255
     Serial.print(" ");
     Serial.print(x67983Message.count);
+    Serial.print(" raw1: ");
+    Serial.print(x67983Message.data[1]);
+    Serial.print(" raw2: ");
+    Serial.print(x67983Message.data[2]);
+    Serial.print(" Throttle Guess: ");
+    Serial.print(x67983Message.data[1] / 3);
+    min = x67983Message.data[1] < min ? x67983Message.data[1] : min;
+    max = x67983Message.data[1] > max? x67983Message.data[1] : max;
+    throttlePercentage = x67983Message.data[1] * 100 / 255;
+    Serial.print(" Min: ");
+    Serial.print(min);
+    Serial.print(" Max: ");
+    Serial.print(max);
     Serial.println();
     // done x67983Message
 
@@ -1210,16 +1224,9 @@ void printout(){
     Serial.print(C7FBE0Message.data[7]);
     Serial.print(" ");
     Serial.print(C7FBE0Message.count);
-    // Confidence in PID, 1%
-    // Confidence in Math, 0%
-    throttlePercentage = (C7FBE0Message.data[1] * 256) + C7FBE0Message.data[0];
-    throttlePercentage /= 256;
-    throttlePercentage -= 24;
-//    throttlePercentage *= (100/255);
-    throttlePercentage /= 3;
 
-    // Confidence in PID, 0%
-    // Confidence in Math, 0%
+    // Confidence in PID, 100% :(
+    // Confidence in Math, 100% :(
     (C7FBE0Message.data[1] << 8) | C7FBE0Message.data[0]; // rpm again
     Serial.println();
     // end C7FBE0Message
@@ -1340,9 +1347,9 @@ void printout(){
     Serial.print(offSet);
 
     // 3 and 2
-    Serial.print(" oilPressure? Raw8: ");
+    Serial.print(" Raw3: ");
     Serial.print(xA2Message.data[3]);
-    Serial.print(" Raw7: ");
+    Serial.print(" Raw2: ");
     Serial.print(xA2Message.data[2]);
 
     // not sure if these are volts are not
@@ -1602,11 +1609,11 @@ void setup(){
     lcd.backlight();      // Make sure backlight is on
 
     // start the SPI library:
-    SPI.begin();
+    SPIClass::begin();
     //default settings, but shown here for learning example.
-    SPI.setBitOrder(MSBFIRST);
-    SPI.setDataMode(SPI_MODE0);
-    SPI.setClockDivider(SPI_CLOCK_DIV2);
+    SPIClass::setBitOrder(MSBFIRST);
+    SPIClass::setDataMode(SPI_MODE0);
+    SPIClass::setClockDivider(SPI_CLOCK_DIV2);
 
     // initalize the  intterupts, ss, and chip select pins:
 
@@ -1618,7 +1625,7 @@ void setup(){
 
     // take the chip select low to select the device
     digitalWrite(6, LOW);
-    SPI.transfer(0xC0); //reset CAN1 command & enter config mode
+    SPIClass::transfer(0xC0); //reset CAN1 command & enter config mode
     // take the chip select high to de-select
     digitalWrite(6, HIGH);
 
@@ -1682,12 +1689,12 @@ void setup(){
 
 } // setup done
 
-void ISR_trig1()
-{
-    Serial.println("ISR_trig1");
-    CylinderTDC = 1;    //rest the cylinder counter to 1 on Cam position sensor falling edge
-
-}
+//void ISR_trig1()
+//{
+//    Serial.println("ISR_trig1");
+//    CylinderTDC = 1;    //rest the cylinder counter to 1 on Cam position sensor falling edge
+//
+//}
 
 void updateLcd() {
     char buffer [21];
@@ -1706,7 +1713,7 @@ void updateLcd() {
     dtostrf(boost,4, 0, buffer);
     lcd.print(buffer);
     lcd.print(" ");
-    dtostrf(load,5, 0, buffer);
+    dtostrf(throttlePercentage,5, 0, buffer);
     lcd.print(buffer);
 
     // row 3
@@ -1729,7 +1736,7 @@ void updateLcd() {
     lcd.print(buffer);
 }
 
-void loop() {
+__attribute__((unused)) void loop() {
     updateLcd();
     //check for ERROR messages and save up to 4
     //observed error message frames have first ID byte set to E0 or E2. Could be others though
