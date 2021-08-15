@@ -208,7 +208,7 @@ char incomingChar;
 String instring, lettersIn, inNum;
 int numbersIn;
 int fuel, timing;
-int all = 1;
+int all = 0;
 int saved;
 int printed;
 //int counter1;
@@ -346,8 +346,11 @@ void ISR_trig0(){
         updateMessage(&C7FAF1Message);
     } else if (data[m1][0] == 0xC7 && data[m1][1] == 0xFA && data[m1][2] == 0xEE) {
         updateMessage(&C7FAEEMessage);
+        waterTemp = ((C7FAEEMessage.data[1] >> 8) | C7FAEEMessage.data[0]) - 40; // celcius water temp!!!
+        waterTemp = waterTemp * 9 / 5 + 32; // F
     } else if (data[m1][0] == 0xC7 && data[m1][1] == 0xFA && data[m1][2] == 0xEF) {
         updateMessage(&C7FAEFMessage);
+        oilPressure = C7FAEFMessage.data[3] * 4 / 6.895;
     } else if (data[m1][0] == 0xC7 && data[m1][1] == 0xFA && data[m1][2] == 0xE4) {
         updateMessage(&C7FAE4Message);
     } else if (data[m1][0] == 0xC7 && data[m1][1] == 0x98 && data[m1][2] == 0x0) {
@@ -721,8 +724,6 @@ void printout(){
     Serial.print(" Count: ");
     Serial.print(C7FAEEMessage.count);
     Serial.print(" Water Temp: ");
-    waterTemp = ((C7FAEEMessage.data[1] >> 8) | C7FAEEMessage.data[0]) - 40; // celcius water temp!!!
-    waterTemp = waterTemp * 9 / 5 + 32; // F
     Serial.print(waterTemp);
     Serial.println();
     // done C7FAEEMessage
@@ -756,7 +757,6 @@ void printout(){
     Serial.print(C7FAEFMessage.count);
     Serial.print(" Oil Pressure? ");
     Serial.print(C7FAEFMessage.data[3] * 4 / 6.895); // OIL PRESSURE!!!
-    oilPressure = C7FAEFMessage.data[3] * 4 / 6.895;
     Serial.println();
     // done C7FAEFMessage
 
