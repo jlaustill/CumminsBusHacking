@@ -172,9 +172,9 @@ const int ss = 53;        //pin 10 for UNO or pin 53 for mega
 
 const int ShiftInProgressPin = 46;
 volatile int shiftInProgress = 0;
-volatile int lastShiftInProgress = 0;
-volatile unsigned long lastShift;
-const int ShiftTime = 9;
+int lastShiftInProgress = 0;
+unsigned long lastShiftTime;
+const int ShiftingThrottlePullupTimeInMs = 9;
 const float ShiftThrottlePull = .85;
 
 volatile byte data[8][16];
@@ -1571,14 +1571,17 @@ void updateLcd() {
 
 __attribute__((unused)) void loop() {
     int newShiftInProgress = !digitalRead(ShiftInProgressPin);
+    // If the shifting input is true and last cycle it wasn't, this is a new shift
     if (newShiftInProgress == 1 && newShiftInProgress != lastShiftInProgress) {
-        lastShift = millis();
+        lastShiftTime = millis();
     }
-    if (millis() - lastShift < ShiftTime) {
+    if (millis() - lastShiftTime < ShiftingThrottlePullupTimeInMs) {
         shiftInProgress = true;
     } else {
         shiftInProgress = false;
     }
+
+    // Blinky blink based on input
     digitalWrite(LED_BUILTIN, newShiftInProgress);
     lastShiftInProgress = newShiftInProgress;
     updateLcd();
