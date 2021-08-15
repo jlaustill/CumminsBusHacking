@@ -172,6 +172,10 @@ const int ss = 53;        //pin 10 for UNO or pin 53 for mega
 
 const int ShiftInProgressPin = 46;
 volatile int shiftInProgress = 0;
+volatile int lastShiftInProgress = 0;
+volatile unsigned long lastShift;
+const int ShiftTime = 9;
+const float ShiftThrottlePull = .85;
 
 volatile byte data[8][16];
 volatile byte dataBuff[8][16];
@@ -190,15 +194,19 @@ int EEwrite, APPS;
 volatile unsigned long timeStampM[8];
 //unsigned long ID, diffT;
 unsigned long lastSample, lastPrint, PRINTinterval = 500;
-unsigned long RPM, FuelLongM, FuelLongR, TimingLongM, TimingLongR; // +
-double fuelTemp; // +
-double oilPressure = 0; // +
-double waterTemp = 0; // +
-double boost = 0; // -
-double load = 0; // +
-double volts = 0; // -
-unsigned long throttlePercentage = 0; // +
-//float ait;
+
+// Our data, how exciting!
+volatile unsigned long RPM, FuelLongM, FuelLongR, TimingLongM, TimingLongR; // +
+volatile double fuelTemp; // +
+volatile double oilPressure = 0; // +
+volatile double waterTemp = 0; // +
+volatile double boost = 0; // -
+volatile double load = 0; // +
+volatile double volts = 0; // -
+volatile unsigned long throttlePercentage = 0; // +
+//volatile float ait; // -
+volatile float Timing; // +
+volatile float FuelPCT; // +
 
 byte printID;
 //byte DLC = 0x08;  //data length code
@@ -241,7 +249,7 @@ boolean modFuel(byte a, byte b, byte c ){
     FuelLongM = FuelLongR;
 
     if (shiftInProgress) {
-        FuelLongM *= 0.5;
+        FuelLongM *= ShiftThrottlePull;
         modified = true;
     }
 
@@ -310,6 +318,7 @@ boolean modFuel(byte a, byte b, byte c ){
 void updateMessage(volatile CanMessage* _messageToUpdate) {
     _messageToUpdate->id = data[m1][0];
     _messageToUpdate->unknown = data[m1][1];
+    _messageToUpdate->unknown2 = data[m1][2];
     _messageToUpdate->length = data[m1][4];
     _messageToUpdate->data[0] = data[m1][5];
     _messageToUpdate->data[1] = data[m1][6];
@@ -323,7 +332,6 @@ void updateMessage(volatile CanMessage* _messageToUpdate) {
 }
 
 void ISR_trig0(){
-//  Serial.println("ISR_trig0");
     //RECEIVE interrupt CAN 1, buffers up to 4 messages, 16 bytes per message, only 13 bytes are used, m1 is the message pointer
 
     digitalWrite(6, LOW);
@@ -346,10 +354,14 @@ void ISR_trig0(){
         updateMessage(&C7FAF1Message);
     } else if (data[m1][0] == 0xC7 && data[m1][1] == 0xFA && data[m1][2] == 0xEE) {
         updateMessage(&C7FAEEMessage);
+
+        // Computer Water Temperature
         waterTemp = ((C7FAEEMessage.data[1] >> 8) | C7FAEEMessage.data[0]) - 40; // celcius water temp!!!
         waterTemp = waterTemp * 9 / 5 + 32; // F
     } else if (data[m1][0] == 0xC7 && data[m1][1] == 0xFA && data[m1][2] == 0xEF) {
         updateMessage(&C7FAEFMessage);
+
+        // Compute Oil Pressure
         oilPressure = C7FAEFMessage.data[3] * 4 / 6.895;
     } else if (data[m1][0] == 0xC7 && data[m1][1] == 0xFA && data[m1][2] == 0xE4) {
         updateMessage(&C7FAE4Message);
@@ -367,16 +379,47 @@ void ISR_trig0(){
         updateMessage(&x675A0Message);
     }  else if (data[m1][0] == 0x67 && data[m1][1] == 0x98 && data[m1][2] == 0x3) {
         updateMessage(&x67983Message);
+
+        // computer APP/throttle percentage
+        throttlePercentage = x67983Message.data[1] * 100 / 255;
     }  else if (data[m1][0] == 0x67 && data[m1][1] == 0x98 && data[m1][2] == 0x4) {
         updateMessage(&x67984Message);
+
+        // Compute Load %
+        load = x67984Message.data[2];
+        load -= 125;
+        load = load * 4 / 5;
     } else if (data[m1][0] == 0xA0) {
         updateMessage(&xA0Message);
     } else if (data[m1][0] == 0xA2) {
         updateMessage(&xA2Message);
     } else if (data[m1][0] == 0x22) {
         updateMessage(&x22Message);
+
+        // Compute Fuel Temperature
+        fuelTemp = (x22Message.data[7] << 8) | x22Message.data[6]; // Raw
+        fuelTemp = fuelTemp / 16; // Kelvin
+        fuelTemp = fuelTemp - 273.15; // Celsius
+        fuelTemp = ((fuelTemp * 9) / 5) + 32; // Fahrenheit
     } else if (data[m1][0] == 0x20) {
         updateMessage(&x20Message);
+
+        //Fuel compute
+        FuelPCT = ((x20Message.data[1] << 8) | x20Message.data[0]);
+        FuelPCT = (float)(FuelPCT*100) / 4096;    // 4095 is max fuel allowed by pump
+
+        // compute timing advance
+        Timing = (x20Message.data[5] << 8) | x20Message.data[4]; //convert from little endian. 128 bits per degree.
+        Timing = (float)((Timing) / 128);
+
+        //compute RPM from ID 20xx bytes 7 and 6
+        RPM = (x20Message.data[7] << 8) | x20Message.data[6];     //convert from little endian
+        RPM /= 4 ;
+
+        // disable 3 cylinder mode if rev'd
+        if(RPM > 1050) {
+            threeCyl = 0;
+        }
 
         //modify fuel bytes if CAN message has ID of 0x20
         boolean modified = false;
@@ -491,8 +534,6 @@ int onlyPrint16 = 0;
 double offSet;
 void printout(){
     byte counter;
-    float Timing;
-    float FuelPCT;
 
     while (!canMessages.isEmpty() && onlyPrint16++ < 16) {
         CanMessage currentMessage = canMessages.pop();
@@ -756,7 +797,7 @@ void printout(){
     Serial.print(" Count: ");
     Serial.print(C7FAEFMessage.count);
     Serial.print(" Oil Pressure? ");
-    Serial.print(C7FAEFMessage.data[3] * 4 / 6.895); // OIL PRESSURE!!!
+    Serial.print(oilPressure); // OIL PRESSURE!!!
     Serial.println();
     // done C7FAEFMessage
 
@@ -882,7 +923,7 @@ void printout(){
     Serial.print(" Count: ");
     Serial.print(x675A0Message.count);
     Serial.print(" RPM: ");
-    Serial.print(((x675A0Message.data[7] << 8) | x675A0Message.data[6]) / 4);
+    Serial.print(RPM);
     Serial.print(" what's this: ");
     Serial.print(((x675A0Message.data[1] << 8) | x675A0Message.data[0]));
     Serial.println();
@@ -919,9 +960,8 @@ void printout(){
     Serial.print(x67983Message.data[1]);
     Serial.print(" raw2: ");
     Serial.print(x67983Message.data[2]);
-    Serial.print(" Throttle: ");
-    Serial.print(x67983Message.data[1] / 3);
-    throttlePercentage = x67983Message.data[1] * 100 / 255;
+    Serial.print(" Throttle %: ");
+    Serial.print(throttlePercentage);
     Serial.println();
     // done x67983Message
 
@@ -955,9 +995,6 @@ void printout(){
     Serial.print(" RPM: ");
     Serial.print(((x67984Message.data[4] << 8) | x67984Message.data[3]) / 8); // rpm again :(
     Serial.print(" load!!! ");
-    load = x67984Message.data[2];
-    load -= 125;
-    load = load * 4 / 5;
     Serial.print(load);
     Serial.println();
     // done x67984Message
@@ -1100,13 +1137,7 @@ void printout(){
     // 5041 107
     // 5051 108
     // 5065 109
-    fuelTemp = (x22Message.data[7] << 8) | x22Message.data[6]; // Raw
-    Serial.print(" Fuel temp F Raw: ");
-    Serial.print(x22Message.data[7]);
-    fuelTemp = fuelTemp / 16; // Kelvin
-    fuelTemp = fuelTemp - 273.15; // Celsius
-    fuelTemp = ((fuelTemp * 9) / 5) + 32; // Fahrenheit
-    Serial.print(" F: ");
+    Serial.print(" Fuel temp: ");
     Serial.print(fuelTemp);
 
     Serial.println();
@@ -1218,24 +1249,14 @@ void printout(){
         Serial.print(fireBuff[y]);
     }
 
-    //Fuel compute
-    FuelPCT = (x20Message.data[1] << 8) | x20Message.data[0];
-    FuelPCT = (float)(FuelPCT*100) / 4096;    // 4095 is max fuel allowed by pump
     Serial.print(" Fuel percent ");
     Serial.print(FuelPCT, 1);
 
-    // compute timing advance
-    Timing = (x20Message.data[5] << 8) | x20Message.data[4]; //convert from little endian. 128 bits per degree.
-    Timing = (float)((Timing) / 128);      //
     Serial.print(" Timing deg ");
     Serial.print(Timing, 1);
 
-    //compute RPM from ID 20xx bytes 11 and 12
-    RPM = (x20Message.data[7] << 8) | x20Message.data[6];     //convert from little endian
-    RPM = RPM/4 ;                           //divide by 4
     Serial.print(" RPM ");
     Serial.print(RPM);
-    if(RPM > 1050){threeCyl = 0;}  //disable 3 cyclinder mode if rev'd
     Serial.println();
     //0x20 done
 
@@ -1512,7 +1533,7 @@ void updateLcd() {
     // row 1
     lcd.setCursor(0,0);
     lcd.print(shiftInProgress ? "*" : " ");
-    lcd.print(" OP H2OT BPSI    T%");
+    lcd.print(" OP H2OT Load    T%");
 
     // row 2
     lcd.setCursor(0,1);
@@ -1522,7 +1543,7 @@ void updateLcd() {
     dtostrf(waterTemp,4, 0, buffer);
     lcd.print(buffer);
     lcd.print(" ");
-    dtostrf(boost,4, 0, buffer);
+    dtostrf(load,4, 0, buffer);
     lcd.print(buffer);
     lcd.print(" ");
     dtostrf(throttlePercentage,5, 0, buffer);
@@ -1530,7 +1551,7 @@ void updateLcd() {
 
     // row 3
     lcd.setCursor(0,2);
-    lcd.print(" RPM   FT  AIT     V");
+    lcd.print(" RPM  FT Timin   F %");
 
 
     // row 4
@@ -1538,34 +1559,43 @@ void updateLcd() {
     dtostrf(RPM, 4, 0, buffer);
     lcd.print(buffer);
     lcd.print(" ");
-    dtostrf(fuelTemp, 4, 0, buffer);
+    dtostrf(fuelTemp, 3, 0, buffer);
     lcd.print(buffer);
     lcd.print(" ");
-    dtostrf(offSet, 4, 1, buffer);
+    dtostrf(Timing, 5, 1, buffer);
     lcd.print(buffer);
     lcd.print(" ");
-    dtostrf(volts, 5, 2, buffer);
+    dtostrf(FuelPCT, 5, 2, buffer);
     lcd.print(buffer);
 }
 
 __attribute__((unused)) void loop() {
-    shiftInProgress = !digitalRead(ShiftInProgressPin);
-    digitalWrite(LED_BUILTIN, shiftInProgress);
+    int newShiftInProgress = !digitalRead(ShiftInProgressPin);
+    if (newShiftInProgress == 1 && newShiftInProgress != lastShiftInProgress) {
+        lastShift = millis();
+    }
+    if (millis() - lastShift < ShiftTime) {
+        shiftInProgress = true;
+    } else {
+        shiftInProgress = false;
+    }
+    digitalWrite(LED_BUILTIN, newShiftInProgress);
+    lastShiftInProgress = newShiftInProgress;
     updateLcd();
     //check for ERROR messages and save up to 4
     //observed error message frames have first ID byte set to E0 or E2. Could be others though
     // so just catch anything greater than A2 (typical ECM ACK message)
-    if(data[y][0] > 0xA2 && EEwrite < 4){
-        for(int i = 0; i < 13; i++){
-            EEPROM.write((y*13) + i, data[y][i]);
-        }
-        EEwrite++;
-    }
+//    if(data[y][0] > 0xA2 && EEwrite < 4){
+//        for(int i = 0; i < 13; i++){
+//            EEPROM.write((y*13) + i, data[y][i]);
+//        }
+//        EEwrite++;
+//    }
 
-    // sample APPS on chanel A0 and intergrate 'smooth'
-    if(micros()-lastSample > 500){
-        APPS = APPS + ((analogRead(0)- APPS)/4);
-    }
+//    // sample APPS on chanel A0 and intergrate 'smooth'
+//    if(micros()-lastSample > 500){
+//        APPS = APPS + ((analogRead(0)- APPS)/4);
+//    }
 
     //print out
     if(millis() - lastPrint > PRINTinterval){
