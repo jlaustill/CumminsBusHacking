@@ -1,0 +1,62 @@
+//
+// !!! WARNING !!! AUTO-GENERATED FILE!
+// PLEASE DO NOT MODIFY IT AND USE "platformio.ini":
+// https://docs.platformio.org/page/projectconf/section_env_build.html#build-flags
+//
+{
+    "configurations": [
+        {
+            "name": "PlatformIO",
+            "includePath": [
+                "/home/jlaustill/repo/CumminsBusHacking/include",
+                "/home/jlaustill/repo/CumminsBusHacking/src",
+                "/home/jlaustill/.platformio/packages/framework-arduino-avr/libraries/SPI/src",
+                "/home/jlaustill/.platformio/packages/framework-arduino-avr/libraries/EEPROM/src",
+                "/home/jlaustill/repo/CumminsBusHacking/.pio/libdeps/megaatmega2560/LiquidCrystal_I2C",
+                "/home/jlaustill/.platformio/packages/framework-arduino-avr/libraries/Wire/src",
+                "/home/jlaustill/.platformio/packages/framework-arduino-avr/cores/arduino",
+                "/home/jlaustill/.platformio/packages/framework-arduino-avr/variants/mega",
+                "/home/jlaustill/.platformio/lib/TimerOne",
+                "/home/jlaustill/.platformio/lib/ToneLibrary/src",
+                "/home/jlaustill/.platformio/packages/framework-arduino-avr/libraries/HID/src",
+                "/home/jlaustill/.platformio/packages/framework-arduino-avr/libraries/SoftwareSerial/src",
+                ""
+            ],
+            "browse": {
+                "limitSymbolsToIncludedHeaders": true,
+                "path": [
+                    "/home/jlaustill/repo/CumminsBusHacking/include",
+                    "/home/jlaustill/repo/CumminsBusHacking/src",
+                    "/home/jlaustill/.platformio/packages/framework-arduino-avr/libraries/SPI/src",
+                    "/home/jlaustill/.platformio/packages/framework-arduino-avr/libraries/EEPROM/src",
+                    "/home/jlaustill/repo/CumminsBusHacking/.pio/libdeps/megaatmega2560/LiquidCrystal_I2C",
+                    "/home/jlaustill/.platformio/packages/framework-arduino-avr/libraries/Wire/src",
+                    "/home/jlaustill/.platformio/packages/framework-arduino-avr/cores/arduino",
+                    "/home/jlaustill/.platformio/packages/framework-arduino-avr/variants/mega",
+                    "/home/jlaustill/.platformio/lib/TimerOne",
+                    "/home/jlaustill/.platformio/lib/ToneLibrary/src",
+                    "/home/jlaustill/.platformio/packages/framework-arduino-avr/libraries/HID/src",
+                    "/home/jlaustill/.platformio/packages/framework-arduino-avr/libraries/SoftwareSerial/src",
+                    ""
+                ]
+            },
+            "defines": [
+                "PLATFORMIO=60105",
+                "ARDUINO_AVR_MEGA2560",
+                "F_CPU=16000000L",
+                "ARDUINO_ARCH_AVR",
+                "ARDUINO=10808",
+                "__AVR_ATmega2560__",
+                ""
+            ],
+            "cStandard": "c11",
+            "cppStandard": "c++11",
+            "compilerPath": "/home/jlaustill/.platformio/packages/toolchain-atmelavr/bin/avr-gcc",
+            "compilerArgs": [
+                "-mmcu=atmega2560",
+                ""
+            ]
+        }
+    ],
+    "version": 4
+}

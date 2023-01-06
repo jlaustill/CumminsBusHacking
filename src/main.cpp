@@ -344,6 +344,19 @@ static inline uint8_t get_sa(uint32_t id)
     return (uint8_t) ((id >> 0U) & ((1U << 8U) - 1));
 }
 
+static inline uint32_t computeId(byte zero, byte one, byte two, byte three) {
+    uint32_t id = (zero<<3) + (one>>5);
+
+    if ( (one & 0x08) ==  0x08 ) {
+        id = (id<<2) + (one & 0x03);
+        id = (id<<8) + two;
+        id = (id<<8) + three;
+        id |= 0x80000000UL;
+    }
+
+    return id;
+}
+
 void ISR_trig0(){
     //RECEIVE interrupt CAN 1, buffers up to 4 messages, 16 bytes per message, only 13 bytes are used, m1 is the message pointer
 
@@ -541,6 +554,40 @@ void printDTC()
     Serial.println();
 }
 
+void printOutMessage(volatile CanMessage* canMessage, String name) {
+    uint32_t id = computeId(canMessage->id, canMessage->unknown, canMessage->unknown2, canMessage->unknown3);
+    Serial.print(name + " ");
+    Serial.print(" ID: " + (String)id + " ");
+    Serial.print(canMessage->id, HEX);
+    Serial.print(" ");
+    Serial.print(canMessage->unknown, HEX);
+    Serial.print(" ");
+    Serial.print(canMessage->unknown2, HEX);
+    Serial.print(" ");
+    Serial.print(canMessage->unknown3, HEX);
+    Serial.print(" ");
+    Serial.print(canMessage->length);
+    Serial.print(" ");
+    Serial.print(canMessage->data[0]);
+    Serial.print(" ");
+    Serial.print(canMessage->data[1]);
+    Serial.print(" ");
+    Serial.print(canMessage->data[2]);
+    Serial.print(" ");
+    Serial.print(canMessage->data[3]);
+    Serial.print(" ");
+    Serial.print(canMessage->data[4]);
+    Serial.print(" ");
+    Serial.print(canMessage->data[5]);
+    Serial.print(" ");
+    Serial.print(canMessage->data[6]);
+    Serial.print(" ");
+    Serial.print(canMessage->data[7]);
+    Serial.print(" ");
+    Serial.print(canMessage->count);
+    Serial.println();
+}
+
 int min = 255;
 int max = 0;
 int onlyPrint16 = 0;
@@ -599,34 +646,7 @@ void printout(){
     // done xA0Message
 
     // start C778FFMessage
-    Serial.print("C778FFMessage ");
-    Serial.print(C778FFMessage.id, HEX);
-    Serial.print(" ");
-    Serial.print(C778FFMessage.unknown, HEX);
-    Serial.print(" ");
-    Serial.print(C778FFMessage.unknown2, HEX);
-    Serial.print(" ");
-    Serial.print(C778FFMessage.length);
-    Serial.print(" ");
-    Serial.print(C778FFMessage.data[0]); // always 32
-    Serial.print(" ");
-    Serial.print(C778FFMessage.data[1]); // switches between 14 and 28
-    Serial.print(" ");
-    Serial.print(C778FFMessage.data[2]); // always 0
-    Serial.print(" ");
-    Serial.print(C778FFMessage.data[3]); // switches between 2 and 3, usually 2
-    Serial.print(" ");
-    Serial.print(C778FFMessage.data[4]); // always 255
-    Serial.print(" ");
-    Serial.print(C778FFMessage.data[5]); // switches between 202 and 227, usually 202
-    Serial.print(" ");
-    Serial.print(C778FFMessage.data[6]); // always 254
-    Serial.print(" ");
-    Serial.print(C778FFMessage.data[7]); // always 0
-    Serial.print(" ");
-    Serial.print(C778FFMessage.count);
-    Serial.println();
-    // done C778FFMessage
+    printOutMessage(&C778FFMessage, "C778FFMessage");
 
     // start C7FADFMessage
 //    Serial.print("C7FADFMessage ");
