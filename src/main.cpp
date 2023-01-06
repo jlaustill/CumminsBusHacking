@@ -135,6 +135,7 @@ struct CanMessage {
     byte id;
     byte unknown;
     byte unknown2;
+    byte unknown3;
     byte length;
     byte data[8];
     unsigned count;
@@ -163,9 +164,9 @@ volatile CanMessage x20Message{};
 volatile CanMessage x22Message{};
 volatile CanMessage xA0Message{};
 volatile CanMessage xA2Message{};
-volatile CanMessage x675A0Message{0x67, 0x5A, 0x0, 0xF8, {0x3, 0xF7, 0xFE, 0x0, 0x0, 0x0, 0x0, 0x0}, 0};
-volatile CanMessage x67984Message{0x67, 0x98, 0x4, 0x8, {0xFE, 0x7D, 0x7D, 0xC0, 0x1, 0xFF, 0xFF, 0xFF}, 0};
-volatile CanMessage x67983Message{0x67, 0x98, 0x3, 0x8, {0xF1, 0x0, 0x0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}, 0};
+volatile CanMessage x675A0Message{0x67, 0x5A, 0x0, 0x0, 0xF8, {0x3, 0xF7, 0xFE, 0x0, 0x0, 0x0, 0x0, 0x0}, 0};
+volatile CanMessage x67984Message{0x67, 0x98, 0x4, 0x0, 0x8, {0xFE, 0x7D, 0x7D, 0xC0, 0x1, 0xFF, 0xFF, 0xFF}, 0};
+volatile CanMessage x67983Message{0x67, 0x98, 0x3, 0x0, 0x8, {0xF1, 0x0, 0x0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}, 0};
 
 const int CANint1 = 2;  //CAN1 INT pin to Arduino pin 2
 const int ss = 53;        //pin 10 for UNO or pin 53 for mega
@@ -319,6 +320,7 @@ void updateMessage(volatile CanMessage* _messageToUpdate) {
     _messageToUpdate->id = data[m1][0];
     _messageToUpdate->unknown = data[m1][1];
     _messageToUpdate->unknown2 = data[m1][2];
+    _messageToUpdate->unknown3 = data[m1][3];
     _messageToUpdate->length = data[m1][4];
     _messageToUpdate->data[0] = data[m1][5];
     _messageToUpdate->data[1] = data[m1][6];
@@ -329,6 +331,17 @@ void updateMessage(volatile CanMessage* _messageToUpdate) {
     _messageToUpdate->data[6] = data[m1][11];
     _messageToUpdate->data[7] = data[m1][12];
     _messageToUpdate->count++;
+}
+
+static inline uint32_t get_pgn(uint32_t id)
+{
+    /* 18-bit parameter group number */
+    return (uint32_t) ((id >> 8U) & ((1U << 18U) - 1));
+}
+static inline uint8_t get_sa(uint32_t id)
+{
+    /* 8-bit source address */
+    return (uint8_t) ((id >> 0U) & ((1U << 8U) - 1));
 }
 
 void ISR_trig0(){
