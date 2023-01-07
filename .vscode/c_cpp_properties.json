@@ -8,14 +8,16 @@
         {
             "name": "PlatformIO",
             "includePath": [
-                "/home/jlaustill/code/CumminsBusHacking/include",
-                "/home/jlaustill/code/CumminsBusHacking/src",
+                "/home/jlaustill/repo/CumminsBusHacking/include",
+                "/home/jlaustill/repo/CumminsBusHacking/src",
                 "/home/jlaustill/.platformio/packages/framework-arduino-avr/libraries/SPI/src",
                 "/home/jlaustill/.platformio/packages/framework-arduino-avr/libraries/EEPROM/src",
-                "/home/jlaustill/code/CumminsBusHacking/.pio/libdeps/megaatmega2560/LiquidCrystal_I2C",
+                "/home/jlaustill/repo/CumminsBusHacking/.pio/libdeps/megaatmega2560/LiquidCrystal_I2C",
                 "/home/jlaustill/.platformio/packages/framework-arduino-avr/libraries/Wire/src",
                 "/home/jlaustill/.platformio/packages/framework-arduino-avr/cores/arduino",
                 "/home/jlaustill/.platformio/packages/framework-arduino-avr/variants/mega",
+                "/home/jlaustill/.platformio/lib/TimerOne",
+                "/home/jlaustill/.platformio/lib/ToneLibrary/src",
                 "/home/jlaustill/.platformio/packages/framework-arduino-avr/libraries/HID/src",
                 "/home/jlaustill/.platformio/packages/framework-arduino-avr/libraries/SoftwareSerial/src",
                 ""
@@ -23,14 +25,16 @@
             "browse": {
                 "limitSymbolsToIncludedHeaders": true,
                 "path": [
-                    "/home/jlaustill/code/CumminsBusHacking/include",
-                    "/home/jlaustill/code/CumminsBusHacking/src",
+                    "/home/jlaustill/repo/CumminsBusHacking/include",
+                    "/home/jlaustill/repo/CumminsBusHacking/src",
                     "/home/jlaustill/.platformio/packages/framework-arduino-avr/libraries/SPI/src",
                     "/home/jlaustill/.platformio/packages/framework-arduino-avr/libraries/EEPROM/src",
-                    "/home/jlaustill/code/CumminsBusHacking/.pio/libdeps/megaatmega2560/LiquidCrystal_I2C",
+                    "/home/jlaustill/repo/CumminsBusHacking/.pio/libdeps/megaatmega2560/LiquidCrystal_I2C",
                     "/home/jlaustill/.platformio/packages/framework-arduino-avr/libraries/Wire/src",
                     "/home/jlaustill/.platformio/packages/framework-arduino-avr/cores/arduino",
                     "/home/jlaustill/.platformio/packages/framework-arduino-avr/variants/mega",
+                    "/home/jlaustill/.platformio/lib/TimerOne",
+                    "/home/jlaustill/.platformio/lib/ToneLibrary/src",
                     "/home/jlaustill/.platformio/packages/framework-arduino-avr/libraries/HID/src",
                     "/home/jlaustill/.platformio/packages/framework-arduino-avr/libraries/SoftwareSerial/src",
                     ""
