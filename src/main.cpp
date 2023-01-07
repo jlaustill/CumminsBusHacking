@@ -187,7 +187,7 @@ volatile byte fireBuff[8];
 const int FiringOrd[] {0, 1, 5, 3, 6, 2, 4};
 
 int x, y;
-int CS = 18;   //chip select CAN1
+int CS = 53;   //chip select CAN1
 int CMP = 3;  //cam pos sensor
 int EEwrite, APPS;
 //int APPSi;
@@ -387,8 +387,6 @@ void ISR_trig0(){
     } else if (data[m1][0] == 0xC7 && data[m1][1] == 0xFA && data[m1][2] == 0xEF) {
         updateMessage(&C7FAEFMessage);
 
-        // Compute Oil Pressure
-        oilPressure = C7FAEFMessage.data[3] * 4 / 6.895;
     } else if (data[m1][0] == 0xC7 && data[m1][1] == 0xFA && data[m1][2] == 0xE4) {
         updateMessage(&C7FAE4Message);
     } else if (data[m1][0] == 0xC7 && data[m1][1] == 0x98 && data[m1][2] == 0x0) {
@@ -634,6 +632,10 @@ void printout(){
         Serial.print(" ");
         Serial.print(currentMessage.unknown, HEX);
         Serial.print(" ");
+        Serial.print(currentMessage.unknown2, HEX);
+        Serial.print(" ");
+        Serial.print(currentMessage.unknown3, HEX);
+        Serial.print(" ");
         Serial.print(currentMessage.length, HEX);
 
         for (unsigned char i : currentMessage.data) {
@@ -712,34 +714,6 @@ void printout(){
 
     // start C75BFFMessage
     printOutMessage(&C75BFFMessage, "C75BFFMessage");
-    // Serial.print("C75BFFMessage ");
-    // Serial.print(C75BFFMessage.id, HEX);
-    // Serial.print(" ");
-    // Serial.print(C75BFFMessage.unknown, HEX);
-    // Serial.print(" ");
-    // Serial.print(C75BFFMessage.unknown2, HEX);
-    // Serial.print(" ");
-    // Serial.print(C75BFFMessage.length);
-    // Serial.print(" ");
-    // Serial.print(C75BFFMessage.data[0]); // x
-    // Serial.print(" ");
-    // Serial.print(C75BFFMessage.data[1]); // xxx
-    // Serial.print(" ");
-    // Serial.print(C75BFFMessage.data[2]);
-    // Serial.print(" ");
-    // Serial.print(C75BFFMessage.data[3]);
-    // Serial.print(" ");
-    // Serial.print(C75BFFMessage.data[4]);
-    // Serial.print(" ");
-    // Serial.print(C75BFFMessage.data[5]);
-    // Serial.print(" ");
-    // Serial.print(C75BFFMessage.data[6]);
-    // Serial.print(" ");
-    // Serial.print(C75BFFMessage.data[7]);
-    // Serial.print(" ");
-    // Serial.print(C75BFFMessage.count);
-    // Serial.println();
-    // done C75BFFMessage
     
     // start C7980Message
     // static
@@ -773,7 +747,9 @@ void printout(){
     // done C7980Message
 
     // start C7FAE4Message
-    // probably a request?
+    printOutMessage(&C7FAE4Message, "C7FAE4Message");
+    Serial.println("hoping this count is zero while quadzilla is unplugged");
+    // probably a request? maybe water temp?
 //    Serial.print("C7FAE4Message ");
 //    Serial.print(C7FAE4Message.id, HEX);
 //    Serial.print(" ");
@@ -805,38 +781,12 @@ void printout(){
 
     // start C7FAEEMessage
     printOutMessage(&C7FAEEMessage, "C7FAEEMessage");
-    // Serial.print("C7FAEEMessage ");
-    // Serial.print(C7FAEEMessage.id, HEX);
-    // Serial.print(" ");
-    // Serial.print(C7FAEEMessage.unknown, HEX);
-    // Serial.print(" ");
-    // Serial.print(C7FAEEMessage.unknown2, HEX);
-    // Serial.print(" ");
-    // Serial.print(C7FAEEMessage.length);
-    // Serial.print(" ");
-    // Serial.print(C7FAEEMessage.data[0]); // water temp
-    // Serial.print(" ");
-    // Serial.print(C7FAEEMessage.data[1]); // water temp
-    // Serial.print(" ");
-    // Serial.print(C7FAEEMessage.data[2]); // always 128
-    // Serial.print(" ");
-    // Serial.print(C7FAEEMessage.data[3]); // always 28
-    // Serial.print(" ");
-    // Serial.print(C7FAEEMessage.data[4]); // always 255
-    // Serial.print(" ");
-    // Serial.print(C7FAEEMessage.data[5]); // always 255
-    // Serial.print(" ");
-    // Serial.print(C7FAEEMessage.data[6]); // always 255
-    // Serial.print(" ");
-    // Serial.print(C7FAEEMessage.data[7]); // always 255
-    // Serial.print(" Count: ");
-    // Serial.print(C7FAEEMessage.count);
-    // Serial.print(" Water Temp: ");
-    // Serial.print(waterTemp);
-    // Serial.println();
-    // done C7FAEEMessage
 
     // start C7FAEFMessage
+
+    // Compute Oil Pressure
+    oilPressure = C7FAEFMessage.data[3] * 4 / 6.895;
+
     Serial.print("C7FAEFMessage ");
     Serial.print(C7FAEFMessage.id, HEX);
     Serial.print(" ");
@@ -863,6 +813,7 @@ void printout(){
     Serial.print(C7FAEFMessage.data[7]); // always 255
     Serial.print(" Count: ");
     Serial.print(C7FAEFMessage.count);
+    
     Serial.print(" Oil Pressure? ");
     Serial.print(oilPressure); // OIL PRESSURE!!!
     Serial.println();
