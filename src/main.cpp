@@ -187,7 +187,7 @@ volatile byte fireBuff[8];
 const int FiringOrd[] {0, 1, 5, 3, 6, 2, 4};
 
 int x, y;
-int CS = 6;   //chip select CAN1
+int CS = 18;   //chip select CAN1
 int CMP = 3;  //cam pos sensor
 int EEwrite, APPS;
 //int APPSi;
@@ -218,7 +218,7 @@ String instring, lettersIn, inNum;
 int numbersIn;
 int fuel, timing;
 int all = 0;
-int saved;
+int saved = 1;
 int printed;
 //int counter1;
 int killCyl;
@@ -556,8 +556,39 @@ void printDTC()
 
 void printOutMessage(volatile CanMessage* canMessage, String name) {
     uint32_t id = computeId(canMessage->id, canMessage->unknown, canMessage->unknown2, canMessage->unknown3);
-    Serial.print(name + " ");
+    uint32_t pgn = get_pgn(id);
+    uint32_t sa = get_sa(id);
+    // Serial.println("id " + (String)id);
+    // Serial.println("pgn " + (String)pgn);
+    // Serial.println("sa " + (String)sa);
+    // char message[128];
+    // char buf[15];
+    // name.toCharArray(buf, 15);
+    // sprintf(message
+    // ,"%.15s ID: %.9u PGN: %.5u SA: %.1u %.2X %.2X %.2X %.2X Length: %.1d Data: %3d %3d %3d %3d %3d %3d %3d %3d Count: %4d"
+    // , buf
+    // , (uint16_t)id
+    // , (uint16_t)pgn
+    // , (uint16_t)sa
+    // , canMessage->id
+    // , canMessage->unknown
+    // , canMessage->unknown2
+    // , canMessage->unknown3
+    // , canMessage->length
+    // , canMessage->data[0]
+    // , canMessage->data[1]
+    // , canMessage->data[2]
+    // , canMessage->data[3]
+    // , canMessage->data[4]
+    // , canMessage->data[5]
+    // , canMessage->data[6]
+    // , canMessage->data[7]
+    // , canMessage->count
+    // );
+    Serial.print(name);
     Serial.print(" ID: " + (String)id + " ");
+    Serial.print(" PGN: " + (String)pgn + " ");
+    Serial.print(" SA: " + (String)sa + " ");
     Serial.print(canMessage->id, HEX);
     Serial.print(" ");
     Serial.print(canMessage->unknown, HEX);
@@ -565,9 +596,9 @@ void printOutMessage(volatile CanMessage* canMessage, String name) {
     Serial.print(canMessage->unknown2, HEX);
     Serial.print(" ");
     Serial.print(canMessage->unknown3, HEX);
-    Serial.print(" ");
+    Serial.print(" Length: ");
     Serial.print(canMessage->length);
-    Serial.print(" ");
+    Serial.print(" Data: ");
     Serial.print(canMessage->data[0]);
     Serial.print(" ");
     Serial.print(canMessage->data[1]);
@@ -583,7 +614,7 @@ void printOutMessage(volatile CanMessage* canMessage, String name) {
     Serial.print(canMessage->data[6]);
     Serial.print(" ");
     Serial.print(canMessage->data[7]);
-    Serial.print(" ");
+    Serial.print(" Count: ");
     Serial.print(canMessage->count);
     Serial.println();
 }
@@ -593,6 +624,7 @@ int max = 0;
 int onlyPrint16 = 0;
 double offSet;
 void printout(){
+    Serial.println("printout called...");
     byte counter;
 
     while (!canMessages.isEmpty() && onlyPrint16++ < 16) {
@@ -679,33 +711,34 @@ void printout(){
     // done C7FADFMessage
 
     // start C75BFFMessage
-    Serial.print("C75BFFMessage ");
-    Serial.print(C75BFFMessage.id, HEX);
-    Serial.print(" ");
-    Serial.print(C75BFFMessage.unknown, HEX);
-    Serial.print(" ");
-    Serial.print(C75BFFMessage.unknown2, HEX);
-    Serial.print(" ");
-    Serial.print(C75BFFMessage.length);
-    Serial.print(" ");
-    Serial.print(C75BFFMessage.data[0]); // x
-    Serial.print(" ");
-    Serial.print(C75BFFMessage.data[1]); // xxx
-    Serial.print(" ");
-    Serial.print(C75BFFMessage.data[2]);
-    Serial.print(" ");
-    Serial.print(C75BFFMessage.data[3]);
-    Serial.print(" ");
-    Serial.print(C75BFFMessage.data[4]);
-    Serial.print(" ");
-    Serial.print(C75BFFMessage.data[5]);
-    Serial.print(" ");
-    Serial.print(C75BFFMessage.data[6]);
-    Serial.print(" ");
-    Serial.print(C75BFFMessage.data[7]);
-    Serial.print(" ");
-    Serial.print(C75BFFMessage.count);
-    Serial.println();
+    printOutMessage(&C75BFFMessage, "C75BFFMessage");
+    // Serial.print("C75BFFMessage ");
+    // Serial.print(C75BFFMessage.id, HEX);
+    // Serial.print(" ");
+    // Serial.print(C75BFFMessage.unknown, HEX);
+    // Serial.print(" ");
+    // Serial.print(C75BFFMessage.unknown2, HEX);
+    // Serial.print(" ");
+    // Serial.print(C75BFFMessage.length);
+    // Serial.print(" ");
+    // Serial.print(C75BFFMessage.data[0]); // x
+    // Serial.print(" ");
+    // Serial.print(C75BFFMessage.data[1]); // xxx
+    // Serial.print(" ");
+    // Serial.print(C75BFFMessage.data[2]);
+    // Serial.print(" ");
+    // Serial.print(C75BFFMessage.data[3]);
+    // Serial.print(" ");
+    // Serial.print(C75BFFMessage.data[4]);
+    // Serial.print(" ");
+    // Serial.print(C75BFFMessage.data[5]);
+    // Serial.print(" ");
+    // Serial.print(C75BFFMessage.data[6]);
+    // Serial.print(" ");
+    // Serial.print(C75BFFMessage.data[7]);
+    // Serial.print(" ");
+    // Serial.print(C75BFFMessage.count);
+    // Serial.println();
     // done C75BFFMessage
     
     // start C7980Message
@@ -771,35 +804,36 @@ void printout(){
     // done C7FAE4Message
 
     // start C7FAEEMessage
-    Serial.print("C7FAEEMessage ");
-    Serial.print(C7FAEEMessage.id, HEX);
-    Serial.print(" ");
-    Serial.print(C7FAEEMessage.unknown, HEX);
-    Serial.print(" ");
-    Serial.print(C7FAEEMessage.unknown2, HEX);
-    Serial.print(" ");
-    Serial.print(C7FAEEMessage.length);
-    Serial.print(" ");
-    Serial.print(C7FAEEMessage.data[0]); // water temp
-    Serial.print(" ");
-    Serial.print(C7FAEEMessage.data[1]); // water temp
-    Serial.print(" ");
-    Serial.print(C7FAEEMessage.data[2]); // always 128
-    Serial.print(" ");
-    Serial.print(C7FAEEMessage.data[3]); // always 28
-    Serial.print(" ");
-    Serial.print(C7FAEEMessage.data[4]); // always 255
-    Serial.print(" ");
-    Serial.print(C7FAEEMessage.data[5]); // always 255
-    Serial.print(" ");
-    Serial.print(C7FAEEMessage.data[6]); // always 255
-    Serial.print(" ");
-    Serial.print(C7FAEEMessage.data[7]); // always 255
-    Serial.print(" Count: ");
-    Serial.print(C7FAEEMessage.count);
-    Serial.print(" Water Temp: ");
-    Serial.print(waterTemp);
-    Serial.println();
+    printOutMessage(&C7FAEEMessage, "C7FAEEMessage");
+    // Serial.print("C7FAEEMessage ");
+    // Serial.print(C7FAEEMessage.id, HEX);
+    // Serial.print(" ");
+    // Serial.print(C7FAEEMessage.unknown, HEX);
+    // Serial.print(" ");
+    // Serial.print(C7FAEEMessage.unknown2, HEX);
+    // Serial.print(" ");
+    // Serial.print(C7FAEEMessage.length);
+    // Serial.print(" ");
+    // Serial.print(C7FAEEMessage.data[0]); // water temp
+    // Serial.print(" ");
+    // Serial.print(C7FAEEMessage.data[1]); // water temp
+    // Serial.print(" ");
+    // Serial.print(C7FAEEMessage.data[2]); // always 128
+    // Serial.print(" ");
+    // Serial.print(C7FAEEMessage.data[3]); // always 28
+    // Serial.print(" ");
+    // Serial.print(C7FAEEMessage.data[4]); // always 255
+    // Serial.print(" ");
+    // Serial.print(C7FAEEMessage.data[5]); // always 255
+    // Serial.print(" ");
+    // Serial.print(C7FAEEMessage.data[6]); // always 255
+    // Serial.print(" ");
+    // Serial.print(C7FAEEMessage.data[7]); // always 255
+    // Serial.print(" Count: ");
+    // Serial.print(C7FAEEMessage.count);
+    // Serial.print(" Water Temp: ");
+    // Serial.print(waterTemp);
+    // Serial.println();
     // done C7FAEEMessage
 
     // start C7FAEFMessage
@@ -929,37 +963,38 @@ void printout(){
 
     // start x675A0Message
     // promising for data
-    Serial.print("x675A0Message ");
-    Serial.print(x675A0Message.id, HEX);
-    Serial.print(" ");
-    Serial.print(x675A0Message.unknown, HEX);
-    Serial.print(" ");
-    Serial.print(x675A0Message.unknown2, HEX);
-    Serial.print(" ");
-    Serial.print(x675A0Message.length); // always 248
-    Serial.print(" ");
-    Serial.print(x675A0Message.data[0]);
-    Serial.print(" ");
-    Serial.print(x675A0Message.data[1]);
-    Serial.print(" ");
-    Serial.print(x675A0Message.data[2]); // always 9
-    Serial.print(" ");
-    Serial.print(x675A0Message.data[3]); // almost always 0
-    Serial.print(" ");
-    Serial.print(x675A0Message.data[4]); // timing again
-    Serial.print(" ");
-    Serial.print(x675A0Message.data[5]); // timing again
-    Serial.print(" ");
-    Serial.print(x675A0Message.data[6]); // rpm
-    Serial.print(" ");
-    Serial.print(x675A0Message.data[7]); // rpm
-    Serial.print(" Count: ");
-    Serial.print(x675A0Message.count);
-    Serial.print(" RPM: ");
-    Serial.print(RPM);
-    Serial.print(" what's this: ");
-    Serial.print(((x675A0Message.data[1] << 8) | x675A0Message.data[0]));
-    Serial.println();
+    printOutMessage(&x675A0Message, "x675A0Message");
+    // Serial.print("x675A0Message ");
+    // Serial.print(x675A0Message.id, HEX);
+    // Serial.print(" ");
+    // Serial.print(x675A0Message.unknown, HEX);
+    // Serial.print(" ");
+    // Serial.print(x675A0Message.unknown2, HEX);
+    // Serial.print(" ");
+    // Serial.print(x675A0Message.length); // always 248
+    // Serial.print(" ");
+    // Serial.print(x675A0Message.data[0]);
+    // Serial.print(" ");
+    // Serial.print(x675A0Message.data[1]);
+    // Serial.print(" ");
+    // Serial.print(x675A0Message.data[2]); // always 9
+    // Serial.print(" ");
+    // Serial.print(x675A0Message.data[3]); // almost always 0
+    // Serial.print(" ");
+    // Serial.print(x675A0Message.data[4]); // timing again
+    // Serial.print(" ");
+    // Serial.print(x675A0Message.data[5]); // timing again
+    // Serial.print(" ");
+    // Serial.print(x675A0Message.data[6]); // rpm
+    // Serial.print(" ");
+    // Serial.print(x675A0Message.data[7]); // rpm
+    // Serial.print(" Count: ");
+    // Serial.print(x675A0Message.count);
+    // Serial.print(" RPM: ");
+    // Serial.print(RPM);
+    // Serial.print(" what's this: ");
+    // Serial.print(((x675A0Message.data[1] << 8) | x675A0Message.data[0]));
+    // Serial.println();
     // done x675A0Message
 
     // start x67983Message
@@ -1603,21 +1638,21 @@ void updateLcd() {
 }
 
 __attribute__((unused)) void loop() {
-    int newShiftInProgress = !digitalRead(ShiftInProgressPin);
+    // int newShiftInProgress = !digitalRead(ShiftInProgressPin);
     // If the shifting input is true and last cycle it wasn't, this is a new shift
-    if (newShiftInProgress == 1 && newShiftInProgress != lastShiftInProgress) {
-        lastShiftTime = millis();
-    }
-    if (millis() - lastShiftTime < ShiftingThrottlePullupTimeInMs) {
-        shiftInProgress = true;
-    } else {
-        shiftInProgress = false;
-    }
+    // if (newShiftInProgress == 1 && newShiftInProgress != lastShiftInProgress) {
+    //     lastShiftTime = millis();
+    // }
+    // if (millis() - lastShiftTime < ShiftingThrottlePullupTimeInMs) {
+    //     shiftInProgress = true;
+    // } else {
+    //     shiftInProgress = false;
+    // }
 
     // Blinky blink based on input
-    digitalWrite(LED_BUILTIN, newShiftInProgress);
-    lastShiftInProgress = newShiftInProgress;
-    updateLcd();
+    // digitalWrite(LED_BUILTIN, newShiftInProgress);
+    // lastShiftInProgress = newShiftInProgress;
+    // updateLcd();
     //check for ERROR messages and save up to 4
     //observed error message frames have first ID byte set to E0 or E2. Could be others though
     // so just catch anything greater than A2 (typical ECM ACK message)
